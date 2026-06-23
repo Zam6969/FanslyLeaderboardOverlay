@@ -66,11 +66,14 @@ body {
 }
 
 .kicker {
+  max-width: 32ch;
   margin: 0 0 4px;
   color: var(--muted);
   font-size: 0.86rem;
   font-weight: 850;
   letter-spacing: 0;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
   text-transform: uppercase;
 }
 

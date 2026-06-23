@@ -5,6 +5,7 @@ const defaultTheme = {
   gradientB: '#6bd3ff',
   shine: '#ffffff'
 };
+const defaultOverlayTitle = 'Fansly Leaderboard Rank';
 
 const els = {
   statusPill: document.querySelector('#statusPill'),
@@ -37,6 +38,7 @@ const els = {
   movementToggle: document.querySelector('#movementToggle'),
   countdownToggle: document.querySelector('#countdownToggle'),
   historyToggle: document.querySelector('#historyToggle'),
+  overlayTitleInput: document.querySelector('#overlayTitleInput'),
   gradientAColor: document.querySelector('#gradientAColor'),
   gradientBColor: document.querySelector('#gradientBColor'),
   shineColor: document.querySelector('#shineColor'),
@@ -48,6 +50,7 @@ els.overlayUrl.textContent = overlayUrl;
 
 let latestState = null;
 let busy = false;
+let titleSaveTimer;
 
 els.startLoginBtn.addEventListener('click', () => post('/api/start-login'));
 els.pollNowBtn.addEventListener('click', () => post('/api/poll-now'));
@@ -72,6 +75,14 @@ els.movementToggle.addEventListener('change', () => {
 });
 els.countdownToggle.addEventListener('change', () => {
   post('/api/overlay-settings', { showCountdown: els.countdownToggle.checked });
+});
+els.overlayTitleInput.addEventListener('input', () => {
+  window.clearTimeout(titleSaveTimer);
+  titleSaveTimer = window.setTimeout(() => postTitle(), 350);
+});
+els.overlayTitleInput.addEventListener('change', () => {
+  window.clearTimeout(titleSaveTimer);
+  postTitle();
 });
 els.gradientAColor.addEventListener('change', () => postTheme());
 els.gradientBColor.addEventListener('change', () => postTheme());
@@ -229,6 +240,7 @@ function setBusy(isBusy) {
   els.movementToggle.disabled = isBusy;
   els.countdownToggle.disabled = isBusy;
   els.historyToggle.disabled = isBusy;
+  els.overlayTitleInput.disabled = isBusy;
   els.gradientAColor.disabled = isBusy;
   els.gradientBColor.disabled = isBusy;
   els.shineColor.disabled = isBusy;
@@ -255,6 +267,11 @@ function renderOverlayControls(state) {
   els.countdownToggle.disabled = busy;
   els.historyToggle.checked = state?.overlaySettings?.showHistory !== false;
   els.historyToggle.disabled = busy;
+  const title = normalizedTitle(state?.overlaySettings?.title);
+  if (document.activeElement !== els.overlayTitleInput) {
+    els.overlayTitleInput.value = title;
+  }
+  els.overlayTitleInput.disabled = busy;
   const theme = normalizedTheme(state?.overlaySettings?.theme);
   els.gradientAColor.value = theme.gradientA;
   els.gradientBColor.value = theme.gradientB;
@@ -263,6 +280,12 @@ function renderOverlayControls(state) {
   els.gradientBColor.disabled = busy;
   els.shineColor.disabled = busy;
   els.resetThemeBtn.disabled = busy;
+}
+
+function postTitle() {
+  return post('/api/overlay-settings', {
+    title: els.overlayTitleInput.value
+  });
 }
 
 function postTheme() {
@@ -324,6 +347,10 @@ function normalizedTheme(theme) {
     gradientB: normalizeHex(theme?.gradientB, defaultTheme.gradientB),
     shine: normalizeHex(theme?.shine, defaultTheme.shine)
   };
+}
+
+function normalizedTitle(value) {
+  return typeof value === 'string' && value.trim() ? value : defaultOverlayTitle;
 }
 
 function normalizeHex(value, fallback) {

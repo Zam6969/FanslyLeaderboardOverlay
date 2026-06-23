@@ -32,6 +32,7 @@ const DEFAULT_OVERLAY_SETTINGS = Object.freeze({
   showHistory: true,
   showMovement: true,
   showCountdown: true,
+  title: 'Fansly Leaderboard Rank',
   theme: {
     gradientA: '#59e0aa',
     gradientB: '#6bd3ff',
@@ -487,6 +488,9 @@ function mergeOverlaySettings(input, base = createDefaultOverlaySettings()) {
   if (typeof input.showCountdown === 'boolean') {
     next.showCountdown = input.showCountdown;
   }
+  if (typeof input.title === 'string') {
+    next.title = sanitizeOverlayTitle(input.title, next.title);
+  }
   if (input.resetTheme === true) {
     next.theme = { ...DEFAULT_OVERLAY_SETTINGS.theme };
   }
@@ -506,6 +510,14 @@ function sanitizeHexColor(value, fallback) {
     return value.trim().toLowerCase();
   }
   return fallback;
+}
+
+function sanitizeOverlayTitle(value, fallback) {
+  const normalized = value.replace(/\s+/g, ' ').trim();
+  if (!normalized) {
+    return fallback;
+  }
+  return normalized.slice(0, 48);
 }
 
 async function recordRank(rank, rankPath, payload, source) {

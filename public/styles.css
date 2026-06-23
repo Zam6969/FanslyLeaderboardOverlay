@@ -292,6 +292,16 @@ h2 {
   margin-top: 16px;
 }
 
+.text-control {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.text-control input {
+  width: min(420px, 100%);
+}
+
 .color-control {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 46px;

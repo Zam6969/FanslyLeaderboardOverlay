@@ -3,6 +3,7 @@ const els = {
   card: document.querySelector('#rankCard'),
   arrowField: document.querySelector('#arrowField'),
   confettiField: document.querySelector('#confettiField'),
+  title: document.querySelector('#overlayTitle'),
   rank: document.querySelector('#rankValue'),
   movement: document.querySelector('#movementPill'),
   countdown: document.querySelector('#overlayCountdown'),
@@ -21,6 +22,7 @@ const defaultTheme = {
   gradientB: '#6bd3ff',
   shine: '#ffffff'
 };
+const defaultOverlayTitle = 'Fansly Leaderboard Rank';
 
 const events = new EventSource('/events');
 events.addEventListener('state', event => render(JSON.parse(event.data)));
@@ -50,6 +52,7 @@ function render(state) {
   previousRank = nextRank;
 
   els.rank.textContent = nextRank == null ? '--' : nextRank;
+  setTitle(state.overlaySettings?.title);
   applyTheme(state.overlaySettings?.theme);
   setMovement(state.movement, state.status);
   renderCountdown(state);
@@ -165,6 +168,10 @@ function renderCountdown(state) {
   const label = formatCountdown(endsAt);
   els.countdown.textContent = label;
   els.countdownPill.dataset.state = label === 'Ended' ? 'ended' : endsAt ? 'active' : 'waiting';
+}
+
+function setTitle(value) {
+  els.title.textContent = typeof value === 'string' && value.trim() ? value.trim() : defaultOverlayTitle;
 }
 
 function applyTheme(theme) {
