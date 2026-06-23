@@ -8,13 +8,13 @@ Dashboard:
 
 ![Dashboard](docs/media/dashboard.jpg)
 
-Overlay leaderboard movement:
+Rank Increase Animation:
 
-![Overlay leaderboard movement](docs/media/leaderboard-change.gif)
+![Overlay Rank Increase Animation](docs/media/leaderboard-change.gif)
 
-Overlay rank increase:
+Rank Decrease Animation:
 
-![Overlay rank increase](docs/media/rank-increase.gif)
+![Overlay Rank Decrease Animation](docs/media/rank-increase.gif)
 
 ## Run
 
