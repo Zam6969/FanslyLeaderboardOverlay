@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Fansly Rank Overlay</title>
+    <link rel="stylesheet" href="/overlay.css" />
+  </head>
+  <body>
+    <main class="overlay" id="overlayRoot">
+      <section class="rank-card" id="rankCard">
+        <div class="shine"></div>
+        <div class="rank-copy">
+          <p class="kicker">Fansly Leaderboard Rank</p>
+          <div class="rank-line">
+            <span class="hash">#</span>
+            <span class="rank" id="rankValue">--</span>
+          </div>
+          <div class="arrow-field" id="arrowField" aria-hidden="true"></div>
+          <div class="confetti-field" id="confettiField" aria-hidden="true"></div>
+        </div>
+        <div class="side-stack">
+          <div class="movement-pill" id="movementPill">Waiting</div>
+          <div class="countdown-pill" id="countdownPill">
+            <span>Ends in</span>
+            <strong id="overlayCountdown">--</strong>
+          </div>
+        </div>
+      </section>
+      <section class="history-strip" id="historyStrip"></section>
+    </main>
+    <script src="/overlay.js" type="module"></script>
+  </body>
+</html>

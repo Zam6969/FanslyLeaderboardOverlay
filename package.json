@@ -1,0 +1,16 @@
+{
+  "name": "fansly-obs-leaderboard-overlay",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Local OBS overlay that captures an authenticated Fansly leaderboard request and displays rank movement.",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "playwright": "^1.53.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

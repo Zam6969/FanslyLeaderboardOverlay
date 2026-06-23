@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Fansly OBS Leaderboard Overlay</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="topbar">
+        <div>
+          <p class="eyebrow">OBS overlay controller</p>
+          <h1>Fansly leaderboard rank</h1>
+        </div>
+        <div class="status-pill" id="statusPill">Starting</div>
+      </section>
+
+      <section class="control-grid">
+        <article class="panel live-panel">
+          <div class="rank-row">
+            <div>
+              <p class="label">Current rank</p>
+              <div class="rank-number" id="rankNumber">--</div>
+            </div>
+            <div class="movement" id="movementBadge">No movement yet</div>
+          </div>
+          <div class="leaderboard-countdown" id="leaderboardCountdown">
+            <span>Leaderboard ends in</span>
+            <strong id="countdownValue">--</strong>
+            <small id="leaderboardMeta">Waiting for leaderboard info</small>
+          </div>
+          <div class="timeline" id="historyTimeline" aria-label="Rank history"></div>
+        </article>
+
+        <article class="panel actions-panel">
+          <p class="label">Capture</p>
+          <div class="button-row">
+            <button id="startLoginBtn" type="button">Start login capture</button>
+            <button id="pollNowBtn" type="button">Poll now</button>
+            <button class="secondary" id="clearHistoryBtn" type="button">Clear history</button>
+            <button class="secondary" id="resetBtn" type="button">Reset auth</button>
+          </div>
+          <form class="test-form" id="testForm">
+            <label class="toggle-row" for="testModeToggle">
+              <input id="testModeToggle" type="checkbox" />
+              <span>Test mode</span>
+            </label>
+            <label for="testRank">Test rank</label>
+            <input id="testRank" name="rank" type="number" min="1" step="1" placeholder="123" />
+            <button class="secondary" id="testRankBtn" type="submit">Push rank</button>
+          </form>
+          <div class="overlay-controls">
+            <label class="toggle-row" for="movementToggle">
+              <input id="movementToggle" type="checkbox" />
+              <span>Show movement badge</span>
+            </label>
+            <label class="toggle-row" for="countdownToggle">
+              <input id="countdownToggle" type="checkbox" />
+              <span>Show countdown</span>
+            </label>
+            <label class="toggle-row" for="historyToggle">
+              <input id="historyToggle" type="checkbox" />
+              <span>Show history strip</span>
+            </label>
+          </div>
+          <p class="hint" id="captureHint">
+            Log in inside the Chromium window, then open the leaderboard so this app can capture your authenticated rank request.
+          </p>
+        </article>
+      </section>
+
+      <section class="panel obs-panel">
+        <div>
+          <p class="label">OBS browser source</p>
+          <code id="overlayUrl">http://127.0.0.1:8787/overlay</code>
+        </div>
+        <button class="secondary" id="copyUrlBtn" type="button">Copy URL</button>
+      </section>
+
+      <section class="details-grid">
+        <article class="panel">
+          <p class="label">Request capture</p>
+          <dl class="meta-list">
+            <div><dt>Source</dt><dd id="captureSource">--</dd></div>
+            <div><dt>Captured</dt><dd id="capturedAt">--</dd></div>
+            <div><dt>Method</dt><dd id="capturedMethod">--</dd></div>
+            <div><dt>Status</dt><dd id="capturedStatus">--</dd></div>
+            <div><dt>Rank field</dt><dd id="rankPath">--</dd></div>
+          </dl>
+          <div class="chips" id="requestHeaderChips"></div>
+        </article>
+
+        <article class="panel">
+          <p class="label">Poll status</p>
+          <dl class="meta-list">
+            <div><dt>Last poll</dt><dd id="lastPollAt">--</dd></div>
+            <div><dt>Next poll</dt><dd id="nextPollAt">--</dd></div>
+            <div><dt>Interval</dt><dd id="pollInterval">30 seconds</dd></div>
+          </dl>
+          <p class="error" id="errorText"></p>
+          <pre class="payload" id="payloadPreview"></pre>
+        </article>
+      </section>
+    </main>
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>

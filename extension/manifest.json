@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "Fansly OBS Rank Capture",
+  "version": "1.0.0",
+  "description": "Captures your authenticated Fansly leaderboard rank request for the local OBS overlay app.",
+  "permissions": ["webRequest", "tabs"],
+  "host_permissions": [
+    "https://leaderboard.fansly.com/leaderboard/getActualUserRank/v1/*",
+    "http://127.0.0.1:8787/*",
+    "http://localhost:8787/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Fansly OBS Rank Capture"
+  }
+}
