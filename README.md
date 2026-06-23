@@ -14,7 +14,7 @@ Overlay leaderboard movement:
 
 Overlay rank increase:
 
-![Overlay rank increase](docs/media/rank-increase.jpg)
+![Overlay rank increase](docs/media/rank-increase.gif)
 
 ## Run
 
