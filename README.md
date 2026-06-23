@@ -10,7 +10,7 @@ Dashboard:
 
 Overlay leaderboard movement:
 
-![Overlay leaderboard movement](docs/media/leaderboard-change.jpg)
+![Overlay leaderboard movement](docs/media/leaderboard-change.gif)
 
 Overlay rank increase:
 
