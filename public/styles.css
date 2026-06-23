@@ -131,6 +131,12 @@ h1 {
   line-height: 1.05;
 }
 
+h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  line-height: 1.1;
+}
+
 .status-pill,
 .movement {
   min-width: max-content;
@@ -268,6 +274,54 @@ h1 {
   padding: 18px 20px;
 }
 
+.customize-panel {
+  margin-top: 16px;
+}
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.color-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.color-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 46px;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 8px 10px;
+  background: #15181d;
+  color: var(--text);
+}
+
+.color-control span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+input[type="color"] {
+  width: 46px;
+  height: 34px;
+  min-height: 34px;
+  border: 0;
+  border-radius: 7px;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
 .timeline {
   display: flex;
   align-items: end;
@@ -374,6 +428,15 @@ dd {
   }
 
   .leaderboard-countdown {
+    grid-template-columns: 1fr;
+  }
+
+  .section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .color-grid {
     grid-template-columns: 1fr;
   }
 

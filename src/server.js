@@ -13,6 +13,7 @@ const browserProfileDir = path.join(dataDir, 'chromium-profile');
 const capturePath = path.join(dataDir, 'auth-capture.json');
 const storageStatePath = path.join(dataDir, 'storage-state.json');
 const historyPath = path.join(dataDir, 'rank-history.json');
+const overlaySettingsPath = path.join(dataDir, 'overlay-settings.json');
 
 const ENDPOINT =
   process.env.FANSLY_RANK_ENDPOINT ||
@@ -27,6 +28,16 @@ const POLL_MS = Number.parseInt(process.env.POLL_MS || '30000', 10);
 const HISTORY_LIMIT = Number.parseInt(process.env.HISTORY_LIMIT || '30', 10);
 
 const endpointUrl = new URL(ENDPOINT);
+const DEFAULT_OVERLAY_SETTINGS = Object.freeze({
+  showHistory: true,
+  showMovement: true,
+  showCountdown: true,
+  theme: {
+    gradientA: '#59e0aa',
+    gradientB: '#6bd3ff',
+    shine: '#ffffff'
+  }
+});
 
 let browserContext;
 let capturePage;
@@ -52,11 +63,7 @@ const appState = {
     lastUpdatedAt: null,
     error: null
   },
-  overlaySettings: {
-    showHistory: true,
-    showMovement: true,
-    showCountdown: true
-  },
+  overlaySettings: createDefaultOverlaySettings(),
   lastPollAt: null,
   nextPollAt: null,
   lastPayloadPreview: null,
@@ -67,6 +74,7 @@ const appState = {
 await ensureDataDir();
 captureState = await readJson(capturePath, null);
 appState.history = await readJson(historyPath, []);
+appState.overlaySettings = mergeOverlaySettings(await readJson(overlaySettingsPath, null));
 if (Array.isArray(appState.history) && appState.history.length > 0) {
   const last = appState.history[appState.history.length - 1];
   appState.rank = last.rank;
@@ -150,15 +158,8 @@ async function handleRequest(req, res) {
 
   if (url.pathname === '/api/overlay-settings' && req.method === 'POST') {
     const body = await readRequestJson(req);
-    if (typeof body.showHistory === 'boolean') {
-      appState.overlaySettings.showHistory = body.showHistory;
-    }
-    if (typeof body.showMovement === 'boolean') {
-      appState.overlaySettings.showMovement = body.showMovement;
-    }
-    if (typeof body.showCountdown === 'boolean') {
-      appState.overlaySettings.showCountdown = body.showCountdown;
-    }
+    appState.overlaySettings = mergeOverlaySettings(body, appState.overlaySettings);
+    await writeJson(overlaySettingsPath, appState.overlaySettings);
     broadcastState();
     return sendJson(res, 200, { ok: true, state: publicState() });
   }
@@ -454,6 +455,57 @@ function cookieMatchesHost(cookieDomain = '', host = '') {
 
 function hasHeader(headers, target) {
   return Object.keys(headers).some(name => name.toLowerCase() === target.toLowerCase());
+}
+
+function createDefaultOverlaySettings() {
+  return {
+    ...DEFAULT_OVERLAY_SETTINGS,
+    theme: { ...DEFAULT_OVERLAY_SETTINGS.theme }
+  };
+}
+
+function mergeOverlaySettings(input, base = createDefaultOverlaySettings()) {
+  const next = {
+    ...createDefaultOverlaySettings(),
+    ...(base && typeof base === 'object' ? base : {}),
+    theme: {
+      ...DEFAULT_OVERLAY_SETTINGS.theme,
+      ...(base?.theme && typeof base.theme === 'object' ? base.theme : {})
+    }
+  };
+
+  if (!input || typeof input !== 'object') {
+    return next;
+  }
+
+  if (typeof input.showHistory === 'boolean') {
+    next.showHistory = input.showHistory;
+  }
+  if (typeof input.showMovement === 'boolean') {
+    next.showMovement = input.showMovement;
+  }
+  if (typeof input.showCountdown === 'boolean') {
+    next.showCountdown = input.showCountdown;
+  }
+  if (input.resetTheme === true) {
+    next.theme = { ...DEFAULT_OVERLAY_SETTINGS.theme };
+  }
+  if (input.theme && typeof input.theme === 'object') {
+    next.theme = {
+      gradientA: sanitizeHexColor(input.theme.gradientA, next.theme.gradientA),
+      gradientB: sanitizeHexColor(input.theme.gradientB, next.theme.gradientB),
+      shine: sanitizeHexColor(input.theme.shine, next.theme.shine)
+    };
+  }
+
+  return next;
+}
+
+function sanitizeHexColor(value, fallback) {
+  if (typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value.trim())) {
+    return value.trim().toLowerCase();
+  }
+  return fallback;
 }
 
 async function recordRank(rank, rankPath, payload, source) {

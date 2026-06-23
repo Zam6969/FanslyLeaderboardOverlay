@@ -16,6 +16,11 @@ let arrowClearTimer;
 let confettiClearTimer;
 let confettiInterval;
 const confettiColors = ['#59e0aa', '#6bd3ff', '#ffd166', '#ff6f8d', '#fbfcff'];
+const defaultTheme = {
+  gradientA: '#59e0aa',
+  gradientB: '#6bd3ff',
+  shine: '#ffffff'
+};
 
 const events = new EventSource('/events');
 events.addEventListener('state', event => render(JSON.parse(event.data)));
@@ -45,6 +50,7 @@ function render(state) {
   previousRank = nextRank;
 
   els.rank.textContent = nextRank == null ? '--' : nextRank;
+  applyTheme(state.overlaySettings?.theme);
   setMovement(state.movement, state.status);
   renderCountdown(state);
   els.root.classList.toggle('movement-hidden', state.overlaySettings?.showMovement === false);
@@ -159,6 +165,33 @@ function renderCountdown(state) {
   const label = formatCountdown(endsAt);
   els.countdown.textContent = label;
   els.countdownPill.dataset.state = label === 'Ended' ? 'ended' : endsAt ? 'active' : 'waiting';
+}
+
+function applyTheme(theme) {
+  const nextTheme = normalizedTheme(theme);
+  els.root.style.setProperty('--overlay-gradient-a', hexToRgba(nextTheme.gradientA, 0.18));
+  els.root.style.setProperty('--overlay-gradient-b', hexToRgba(nextTheme.gradientB, 0.16));
+  els.root.style.setProperty('--overlay-shine', hexToRgba(nextTheme.shine, 0.28));
+}
+
+function normalizedTheme(theme) {
+  return {
+    gradientA: normalizeHex(theme?.gradientA, defaultTheme.gradientA),
+    gradientB: normalizeHex(theme?.gradientB, defaultTheme.gradientB),
+    shine: normalizeHex(theme?.shine, defaultTheme.shine)
+  };
+}
+
+function normalizeHex(value, fallback) {
+  return typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value) ? value.toLowerCase() : fallback;
+}
+
+function hexToRgba(value, alpha) {
+  const hex = normalizeHex(value, '#ffffff').slice(1);
+  const red = Number.parseInt(hex.slice(0, 2), 16);
+  const green = Number.parseInt(hex.slice(2, 4), 16);
+  const blue = Number.parseInt(hex.slice(4, 6), 16);
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
 }
 
 function formatCountdown(value) {

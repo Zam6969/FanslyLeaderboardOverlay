@@ -8,6 +8,9 @@
   --rose: #ff6f8d;
   --amber: #ffd166;
   --cyan: #6bd3ff;
+  --overlay-gradient-a: rgba(89, 224, 170, 0.18);
+  --overlay-gradient-b: rgba(107, 211, 255, 0.16);
+  --overlay-shine: rgba(255, 255, 255, 0.24);
 }
 
 * {
@@ -41,8 +44,8 @@ body {
   border-radius: 8px;
   padding: 20px 22px;
   background:
-    linear-gradient(115deg, rgba(89, 224, 170, 0.18), transparent 44%),
-    linear-gradient(285deg, rgba(107, 211, 255, 0.16), transparent 46%),
+    linear-gradient(115deg, var(--overlay-gradient-a), transparent 44%),
+    linear-gradient(285deg, var(--overlay-gradient-b), transparent 46%),
     var(--glass);
   box-shadow: 0 18px 55px rgba(0, 0, 0, 0.42);
   backdrop-filter: blur(14px);
@@ -53,7 +56,7 @@ body {
   inset: -80% auto -80% -38%;
   width: 30%;
   transform: rotate(18deg);
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.24), transparent);
+  background: linear-gradient(90deg, transparent, var(--overlay-shine), transparent);
   animation: sweep 4.8s ease-in-out infinite;
 }
 

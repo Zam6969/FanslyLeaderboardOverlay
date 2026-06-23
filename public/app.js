@@ -1,5 +1,10 @@
 const stateUrl = `${location.origin}/api/state`;
 const overlayUrl = `${location.origin}/overlay`;
+const defaultTheme = {
+  gradientA: '#59e0aa',
+  gradientB: '#6bd3ff',
+  shine: '#ffffff'
+};
 
 const els = {
   statusPill: document.querySelector('#statusPill'),
@@ -32,6 +37,10 @@ const els = {
   movementToggle: document.querySelector('#movementToggle'),
   countdownToggle: document.querySelector('#countdownToggle'),
   historyToggle: document.querySelector('#historyToggle'),
+  gradientAColor: document.querySelector('#gradientAColor'),
+  gradientBColor: document.querySelector('#gradientBColor'),
+  shineColor: document.querySelector('#shineColor'),
+  resetThemeBtn: document.querySelector('#resetThemeBtn'),
   captureSource: document.querySelector('#captureSource')
 };
 
@@ -63,6 +72,12 @@ els.movementToggle.addEventListener('change', () => {
 });
 els.countdownToggle.addEventListener('change', () => {
   post('/api/overlay-settings', { showCountdown: els.countdownToggle.checked });
+});
+els.gradientAColor.addEventListener('change', () => postTheme());
+els.gradientBColor.addEventListener('change', () => postTheme());
+els.shineColor.addEventListener('change', () => postTheme());
+els.resetThemeBtn.addEventListener('click', () => {
+  post('/api/overlay-settings', { resetTheme: true });
 });
 els.testForm.addEventListener('submit', async event => {
   event.preventDefault();
@@ -214,6 +229,10 @@ function setBusy(isBusy) {
   els.movementToggle.disabled = isBusy;
   els.countdownToggle.disabled = isBusy;
   els.historyToggle.disabled = isBusy;
+  els.gradientAColor.disabled = isBusy;
+  els.gradientBColor.disabled = isBusy;
+  els.shineColor.disabled = isBusy;
+  els.resetThemeBtn.disabled = isBusy;
   renderTestControls(latestState);
 }
 
@@ -236,6 +255,24 @@ function renderOverlayControls(state) {
   els.countdownToggle.disabled = busy;
   els.historyToggle.checked = state?.overlaySettings?.showHistory !== false;
   els.historyToggle.disabled = busy;
+  const theme = normalizedTheme(state?.overlaySettings?.theme);
+  els.gradientAColor.value = theme.gradientA;
+  els.gradientBColor.value = theme.gradientB;
+  els.shineColor.value = theme.shine;
+  els.gradientAColor.disabled = busy;
+  els.gradientBColor.disabled = busy;
+  els.shineColor.disabled = busy;
+  els.resetThemeBtn.disabled = busy;
+}
+
+function postTheme() {
+  return post('/api/overlay-settings', {
+    theme: {
+      gradientA: els.gradientAColor.value,
+      gradientB: els.gradientBColor.value,
+      shine: els.shineColor.value
+    }
+  });
 }
 
 function formatTime(value) {
@@ -279,6 +316,18 @@ function formatCountdown(value) {
 function trimForUi(value, maxLength = 700) {
   const text = String(value || '').replace(/\s+/g, ' ').trim();
   return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
+}
+
+function normalizedTheme(theme) {
+  return {
+    gradientA: normalizeHex(theme?.gradientA, defaultTheme.gradientA),
+    gradientB: normalizeHex(theme?.gradientB, defaultTheme.gradientB),
+    shine: normalizeHex(theme?.shine, defaultTheme.shine)
+  };
+}
+
+function normalizeHex(value, fallback) {
+  return typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value) ? value.toLowerCase() : fallback;
 }
 
 function labelStatus(status = '') {
