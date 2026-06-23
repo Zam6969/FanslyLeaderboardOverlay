@@ -16,6 +16,8 @@ Rank Decrease Animation:
 
 ![Overlay Rank Decrease Animation](docs/media/rank-increase.gif)
 
+In action:
+![Overlay Rank Decrease Animation](docs/media/2026-06-23%202-19-08.mp4)
 ## Run
 
 ```powershell
