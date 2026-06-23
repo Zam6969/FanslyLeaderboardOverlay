@@ -70,9 +70,15 @@ Use the `Overlay customization` panel on the dashboard to change the overlay tit
 2. Click `Start login capture`.
 3. A Playwright Chromium window opens. Log in to your own Fansly account there.
 4. Manually open the Fansly leaderboard in that same Chromium window.
-5. Once the app sees the authenticated request to `getActualUserRank/v1`, it stores the request headers, response header names, cookies, and rank history locally under `data/`.
+5. Once the app sees the authenticated request to `getActualUserRank/v1`, it stores the request headers, response header names, cookies, and rank history encrypted locally under `data/`.
 
 The login capture starts on `https://fansly.com/`, not `leaderboard.fansly.com`. The dashboard intentionally shows only header names, not token values. Keep the `data/` folder private because it contains local session material.
+
+## Local Data Encryption
+
+The app encrypts its local JSON data files with AES-256-GCM before writing them to `data/`. Existing plaintext JSON files are migrated automatically on startup. On Windows, the generated encryption key is protected with the current Windows user through DPAPI when available. On other systems, set `FANSLY_OVERLAY_SECRET` before the first run if you want the local key protected by your own secret.
+
+The Playwright Chromium profile also lives under `data/` so the login browser can stay signed in. Treat the whole `data/` folder as private and use `Reset auth` if you want to remove captured session material.
 
 ## Settings
 
@@ -83,6 +89,7 @@ $env:PORT = "8787"
 $env:POLL_MS = "30000"
 $env:FANSLY_RANK_ENDPOINT = "https://leaderboard.fansly.com/leaderboard/getActualUserRank/v1/?ngsw-bypass=true"
 $env:FANSLY_LEADERBOARD_INFO_ENDPOINT = "https://leaderboard.fansly.com/leaderboard/getCurrentLeaderboard/v1/?v=1&ngsw-bypass=true"
+$env:FANSLY_OVERLAY_SECRET = "optional local encryption secret"
 npm.cmd start
 ```
 

@@ -1,11 +1,19 @@
 import http from 'node:http';
-import { spawn } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
+import {
+  createCipheriv,
+  createDecipheriv,
+  pbkdf2Sync,
+  randomBytes
+} from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
+import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const execFileAsync = promisify(execFile);
 const appRoot = path.resolve(__dirname, '..');
 const publicDir = path.join(appRoot, 'public');
 const dataDir = path.join(appRoot, 'data');
@@ -14,6 +22,7 @@ const capturePath = path.join(dataDir, 'auth-capture.json');
 const storageStatePath = path.join(dataDir, 'storage-state.json');
 const historyPath = path.join(dataDir, 'rank-history.json');
 const overlaySettingsPath = path.join(dataDir, 'overlay-settings.json');
+const encryptionKeyPath = path.join(dataDir, 'encryption-key.json');
 
 const ENDPOINT =
   process.env.FANSLY_RANK_ENDPOINT ||
@@ -26,6 +35,10 @@ const HOST = process.env.HOST || '127.0.0.1';
 const PORT = Number.parseInt(process.env.PORT || '8787', 10);
 const POLL_MS = Number.parseInt(process.env.POLL_MS || '30000', 10);
 const HISTORY_LIMIT = Number.parseInt(process.env.HISTORY_LIMIT || '30', 10);
+const ENCRYPTED_JSON_FORMAT = 'fansly-obs-overlay/encrypted-json-v1';
+const ENCRYPTION_KEY_FORMAT = 'fansly-obs-overlay/encryption-key-v1';
+const DATA_ENCRYPTION_ALGORITHM = 'aes-256-gcm';
+const PASSPHRASE_KDF_ITERATIONS = 210000;
 
 const endpointUrl = new URL(ENDPOINT);
 const DEFAULT_OVERLAY_SETTINGS = Object.freeze({
@@ -46,6 +59,7 @@ let captureState;
 let pollTimer;
 let pollInFlight = false;
 const clients = new Set();
+let encryptionKeyPromise;
 
 const appState = {
   status: 'starting',
@@ -73,6 +87,7 @@ const appState = {
 };
 
 await ensureDataDir();
+await migrateLegacyJsonFiles();
 captureState = await readJson(capturePath, null);
 appState.history = await readJson(historyPath, []);
 appState.overlaySettings = mergeOverlaySettings(await readJson(overlaySettingsPath, null));
@@ -243,7 +258,7 @@ async function rememberAuthenticatedRequest(request) {
   };
 
   if (browserContext) {
-    await browserContext.storageState({ path: storageStatePath });
+    await writeJson(storageStatePath, await browserContext.storageState());
   }
 
   await writeJson(capturePath, captureState);
@@ -944,15 +959,20 @@ async function ensureDataDir() {
 
 async function readJson(filePath, fallback) {
   try {
-    return JSON.parse(await fs.readFile(filePath, 'utf8'));
-  } catch {
+    const text = await fs.readFile(filePath, 'utf8');
+    return await parseStoredJson(text);
+  } catch (error) {
+    if (error.code !== 'ENOENT') {
+      console.warn(`Could not read local app data at ${path.basename(filePath)}: ${error.message || error}`);
+    }
     return fallback;
   }
 }
 
 async function writeJson(filePath, value) {
   await fs.mkdir(path.dirname(filePath), { recursive: true });
-  await fs.writeFile(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+  const encrypted = await encryptJsonValue(value);
+  await fs.writeFile(filePath, `${JSON.stringify(encrypted, null, 2)}\n`, 'utf8');
 }
 
 async function removeIfExists(filePath) {
@@ -961,6 +981,276 @@ async function removeIfExists(filePath) {
   } catch {
     // Ignore missing local app state.
   }
+}
+
+async function migrateLegacyJsonFiles() {
+  await Promise.all([
+    migrateLegacyJsonFile(capturePath),
+    migrateLegacyJsonFile(storageStatePath),
+    migrateLegacyJsonFile(historyPath),
+    migrateLegacyJsonFile(overlaySettingsPath)
+  ]);
+}
+
+async function migrateLegacyJsonFile(filePath) {
+  try {
+    const text = await fs.readFile(filePath, 'utf8');
+    const parsed = JSON.parse(text);
+    if (isEncryptedJsonEnvelope(parsed)) {
+      return;
+    }
+    await writeJson(filePath, parsed);
+  } catch (error) {
+    if (error.code !== 'ENOENT') {
+      console.warn(`Could not migrate local app data at ${path.basename(filePath)}: ${error.message || error}`);
+    }
+  }
+}
+
+async function parseStoredJson(text) {
+  const parsed = JSON.parse(text);
+  if (!isEncryptedJsonEnvelope(parsed)) {
+    return parsed;
+  }
+  return decryptJsonValue(parsed);
+}
+
+function isEncryptedJsonEnvelope(value) {
+  return (
+    value &&
+    typeof value === 'object' &&
+    value.format === ENCRYPTED_JSON_FORMAT &&
+    value.version === 1 &&
+    value.algorithm === DATA_ENCRYPTION_ALGORITHM
+  );
+}
+
+async function encryptJsonValue(value) {
+  const key = await getEncryptionKey();
+  const iv = randomBytes(12);
+  const cipher = createCipheriv(DATA_ENCRYPTION_ALGORITHM, key, iv);
+  const plaintext = Buffer.from(JSON.stringify(value, null, 2), 'utf8');
+  const encrypted = Buffer.concat([cipher.update(plaintext), cipher.final()]);
+
+  return {
+    format: ENCRYPTED_JSON_FORMAT,
+    version: 1,
+    algorithm: DATA_ENCRYPTION_ALGORITHM,
+    iv: iv.toString('base64'),
+    tag: cipher.getAuthTag().toString('base64'),
+    data: encrypted.toString('base64')
+  };
+}
+
+async function decryptJsonValue(envelope) {
+  const key = await getEncryptionKey({ create: false });
+  const decipher = createDecipheriv(
+    envelope.algorithm,
+    key,
+    Buffer.from(envelope.iv || '', 'base64')
+  );
+  decipher.setAuthTag(Buffer.from(envelope.tag || '', 'base64'));
+  const decrypted = Buffer.concat([
+    decipher.update(Buffer.from(envelope.data || '', 'base64')),
+    decipher.final()
+  ]);
+  return JSON.parse(decrypted.toString('utf8'));
+}
+
+async function getEncryptionKey(options = {}) {
+  if (encryptionKeyPromise) {
+    return encryptionKeyPromise;
+  }
+
+  const create = options.create !== false;
+  const pendingKey = loadOrCreateEncryptionKey({ create });
+  if (create) {
+    encryptionKeyPromise = pendingKey.catch(error => {
+      encryptionKeyPromise = null;
+      throw error;
+    });
+    return encryptionKeyPromise;
+  }
+
+  const key = await pendingKey;
+  encryptionKeyPromise = Promise.resolve(key);
+  return key;
+}
+
+async function loadOrCreateEncryptionKey({ create }) {
+  const record = await readEncryptionKeyRecord();
+  if (record) {
+    const key = await unwrapEncryptionKey(record);
+    await maybeUpgradeEncryptionKeyRecord(record, key);
+    return key;
+  }
+
+  if (!create) {
+    throw new Error('Missing local encryption key. Reset auth or restore data/encryption-key.json.');
+  }
+
+  const key = randomBytes(32);
+  const nextRecord = await wrapEncryptionKey(key);
+  await writeEncryptionKeyRecord(nextRecord);
+  return key;
+}
+
+async function maybeUpgradeEncryptionKeyRecord(record, key) {
+  if (record.provider !== 'local-file') {
+    return;
+  }
+
+  const upgradedRecord = await wrapEncryptionKey(key);
+  if (upgradedRecord.provider !== record.provider) {
+    await writeEncryptionKeyRecord(upgradedRecord);
+  }
+}
+
+async function readEncryptionKeyRecord() {
+  try {
+    const record = JSON.parse(await fs.readFile(encryptionKeyPath, 'utf8'));
+    if (record?.format !== ENCRYPTION_KEY_FORMAT || record.version !== 1) {
+      throw new Error('Unsupported encryption key format.');
+    }
+    return record;
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      return null;
+    }
+    throw error;
+  }
+}
+
+async function writeEncryptionKeyRecord(record) {
+  await fs.mkdir(path.dirname(encryptionKeyPath), { recursive: true });
+  await fs.writeFile(encryptionKeyPath, `${JSON.stringify(record, null, 2)}\n`, {
+    encoding: 'utf8',
+    mode: 0o600
+  });
+  try {
+    await fs.chmod(encryptionKeyPath, 0o600);
+  } catch {
+    // Windows may ignore POSIX file modes; DPAPI still protects the key there.
+  }
+}
+
+async function wrapEncryptionKey(key) {
+  const configuredSecret = configuredEncryptionSecret();
+  if (configuredSecret) {
+    return {
+      format: ENCRYPTION_KEY_FORMAT,
+      version: 1,
+      provider: 'passphrase',
+      createdAt: new Date().toISOString(),
+      ...encryptKeyWithSecret(key, configuredSecret)
+    };
+  }
+
+  if (process.platform === 'win32') {
+    try {
+      return {
+        format: ENCRYPTION_KEY_FORMAT,
+        version: 1,
+        provider: 'windows-dpapi',
+        createdAt: new Date().toISOString(),
+        protectedKey: (await dpapiTransform('protect', key)).toString('base64')
+      };
+    } catch (error) {
+      console.warn(`Windows key protection failed; using local-file key fallback: ${error.message || error}`);
+    }
+  }
+
+  return {
+    format: ENCRYPTION_KEY_FORMAT,
+    version: 1,
+    provider: 'local-file',
+    createdAt: new Date().toISOString(),
+    key: key.toString('base64')
+  };
+}
+
+async function unwrapEncryptionKey(record) {
+  let key;
+  if (record.provider === 'passphrase') {
+    const configuredSecret = configuredEncryptionSecret();
+    if (!configuredSecret) {
+      throw new Error('FANSLY_OVERLAY_SECRET is required to unlock this app data.');
+    }
+    key = decryptKeyWithSecret(record, configuredSecret);
+  } else if (record.provider === 'windows-dpapi') {
+    key = await dpapiTransform('unprotect', Buffer.from(record.protectedKey || '', 'base64'));
+  } else if (record.provider === 'local-file') {
+    key = Buffer.from(record.key || '', 'base64');
+  } else {
+    throw new Error(`Unsupported encryption key provider: ${record.provider || 'unknown'}`);
+  }
+
+  if (key.length !== 32) {
+    throw new Error('Local encryption key is invalid.');
+  }
+  return key;
+}
+
+function configuredEncryptionSecret() {
+  return process.env.FANSLY_OVERLAY_SECRET || process.env.FANSLY_OVERLAY_ENCRYPTION_KEY || '';
+}
+
+function encryptKeyWithSecret(key, secret) {
+  const salt = randomBytes(16);
+  const iv = randomBytes(12);
+  const wrappingKey = deriveKeyWrappingKey(secret, salt);
+  const cipher = createCipheriv(DATA_ENCRYPTION_ALGORITHM, wrappingKey, iv);
+  const encrypted = Buffer.concat([cipher.update(key), cipher.final()]);
+  return {
+    algorithm: DATA_ENCRYPTION_ALGORITHM,
+    kdf: 'pbkdf2-sha256',
+    iterations: PASSPHRASE_KDF_ITERATIONS,
+    salt: salt.toString('base64'),
+    iv: iv.toString('base64'),
+    tag: cipher.getAuthTag().toString('base64'),
+    protectedKey: encrypted.toString('base64')
+  };
+}
+
+function decryptKeyWithSecret(record, secret) {
+  const wrappingKey = deriveKeyWrappingKey(secret, Buffer.from(record.salt || '', 'base64'));
+  const decipher = createDecipheriv(
+    record.algorithm || DATA_ENCRYPTION_ALGORITHM,
+    wrappingKey,
+    Buffer.from(record.iv || '', 'base64')
+  );
+  decipher.setAuthTag(Buffer.from(record.tag || '', 'base64'));
+  return Buffer.concat([
+    decipher.update(Buffer.from(record.protectedKey || '', 'base64')),
+    decipher.final()
+  ]);
+}
+
+function deriveKeyWrappingKey(secret, salt) {
+  return pbkdf2Sync(secret, salt, PASSPHRASE_KDF_ITERATIONS, 32, 'sha256');
+}
+
+async function dpapiTransform(action, input) {
+  const script = [
+    '& { param([string]$InputBase64, [string]$Action)',
+    "$ErrorActionPreference = 'Stop'",
+    'Add-Type -AssemblyName System.Security',
+    '$bytes = [Convert]::FromBase64String($InputBase64)',
+    '$scope = [Security.Cryptography.DataProtectionScope]::CurrentUser',
+    "if ($Action -eq 'protect') {",
+    '  $output = [Security.Cryptography.ProtectedData]::Protect($bytes, $null, $scope)',
+    '} else {',
+    '  $output = [Security.Cryptography.ProtectedData]::Unprotect($bytes, $null, $scope)',
+    '}',
+    '[Convert]::ToBase64String($output)',
+    '}'
+  ].join('; ');
+  const { stdout } = await execFileAsync(
+    'powershell.exe',
+    ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', script, input.toString('base64'), action],
+    { windowsHide: true, timeout: 10000, maxBuffer: 1024 * 1024 }
+  );
+  return Buffer.from(stdout.trim(), 'base64');
 }
 
 function parseJson(text) {

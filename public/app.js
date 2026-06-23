@@ -151,8 +151,8 @@ function render(state) {
   renderCountdown(state);
 
   els.captureHint.textContent = state.capture
-    ? `Authenticated headers are captured locally from ${labelCaptureSource(state.capture.source).toLowerCase()}. The server polls Fansly every 30 seconds with the replayable request headers.`
-    : 'Click Start login capture, log in on fansly.com, then open the leaderboard inside that Chromium window so the authenticated rank request can be captured.';
+    ? `Authenticated headers are encrypted locally from ${labelCaptureSource(state.capture.source).toLowerCase()}. The server polls Fansly every 30 seconds with the replayable request headers.`
+    : 'Click Start login capture, log in on fansly.com, then open the leaderboard inside that Chromium window so the authenticated rank request can be captured and encrypted locally.';
 
   els.capturedAt.textContent = formatTime(state.capture?.capturedAt);
   els.captureSource.textContent = labelCaptureSource(state.capture?.source);
