@@ -15,6 +15,7 @@ const els = {
   countdownValue: document.querySelector('#countdownValue'),
   leaderboardMeta: document.querySelector('#leaderboardMeta'),
   captureHint: document.querySelector('#captureHint'),
+  sessionWarning: document.querySelector('#sessionWarning'),
   overlayUrl: document.querySelector('#overlayUrl'),
   capturedAt: document.querySelector('#capturedAt'),
   capturedMethod: document.querySelector('#capturedMethod'),
@@ -143,16 +144,22 @@ async function post(path, requestBody) {
 
 function render(state) {
   latestState = state;
+  const sessionExpired = isSessionExpired(state);
   els.statusPill.textContent = labelStatus(state.status);
-  els.statusPill.dataset.state = state.error ? 'error' : state.status;
+  els.statusPill.dataset.state = sessionExpired ? 'session-expired' : state.error ? 'error' : state.status;
   els.rankNumber.textContent = state.rank == null ? '--' : `#${state.rank}`;
   renderMovement(els.movementBadge, state.movement);
   renderHistory(state.history || []);
   renderCountdown(state);
+  renderSessionWarning(state);
 
-  els.captureHint.textContent = state.capture
-    ? `Authenticated headers are encrypted locally from ${labelCaptureSource(state.capture.source).toLowerCase()}. The server polls Fansly every 30 seconds with the replayable request headers.`
-    : 'Click Start login capture, log in on fansly.com, then open the leaderboard inside that Chromium window so the authenticated rank request can be captured and encrypted locally.';
+  if (sessionExpired) {
+    els.captureHint.textContent = 'Your saved Fansly login expired. Click Start login capture, log in again, then open the leaderboard in that Chromium window.';
+  } else {
+    els.captureHint.textContent = state.capture
+      ? `Authenticated headers are encrypted locally from ${labelCaptureSource(state.capture.source).toLowerCase()}. The server polls Fansly every 30 seconds with the replayable request headers.`
+      : 'Click Start login capture, log in on fansly.com, then open the leaderboard inside that Chromium window so the authenticated rank request can be captured and encrypted locally.';
+  }
 
   els.capturedAt.textContent = formatTime(state.capture?.capturedAt);
   els.captureSource.textContent = labelCaptureSource(state.capture?.source);
@@ -167,6 +174,18 @@ function render(state) {
   renderHeaderChips(state.capture?.requestHeaderNames || []);
   renderTestControls(state);
   renderOverlayControls(state);
+}
+
+function renderSessionWarning(state) {
+  const sessionExpired = isSessionExpired(state);
+  els.sessionWarning.hidden = !sessionExpired;
+  if (!sessionExpired) {
+    return;
+  }
+
+  const detail = state.sessionExpiredReason ? ` Last response: ${trimForUi(state.sessionExpiredReason, 120)}` : '';
+  els.sessionWarning.querySelector('span').textContent =
+    `Fansly rejected the saved session. Start login capture and log in again to refresh it.${detail}`;
 }
 
 function renderMovement(target, movement) {
@@ -358,10 +377,17 @@ function normalizeHex(value, fallback) {
 }
 
 function labelStatus(status = '') {
+  if (status === 'session-expired') {
+    return 'Login expired';
+  }
   return status
     .split('-')
     .map(part => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ');
+}
+
+function isSessionExpired(state) {
+  return state?.status === 'session-expired' || Boolean(state?.sessionExpiredAt);
 }
 
 function labelCaptureSource(source) {

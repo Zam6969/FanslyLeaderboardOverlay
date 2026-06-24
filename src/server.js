@@ -39,6 +39,7 @@ const ENCRYPTED_JSON_FORMAT = 'fansly-obs-overlay/encrypted-json-v1';
 const ENCRYPTION_KEY_FORMAT = 'fansly-obs-overlay/encryption-key-v1';
 const DATA_ENCRYPTION_ALGORITHM = 'aes-256-gcm';
 const PASSPHRASE_KDF_ITERATIONS = 210000;
+const SESSION_EXPIRED_MESSAGE = 'Fansly login expired. Click Start login capture and log in again.';
 
 const endpointUrl = new URL(ENDPOINT);
 const DEFAULT_OVERLAY_SETTINGS = Object.freeze({
@@ -69,6 +70,8 @@ const appState = {
   rankPath: null,
   testMode: false,
   testSnapshot: null,
+  sessionExpiredAt: null,
+  sessionExpiredReason: null,
   leaderboard: {
     key: null,
     description: null,
@@ -198,6 +201,8 @@ async function handleRequest(req, res) {
 }
 
 async function startLoginCapture() {
+  const wasSessionExpired = isSessionExpired();
+  clearSessionExpired();
   appState.status = 'opening-login';
   appState.error = null;
   broadcastState();
@@ -213,7 +218,7 @@ async function startLoginCapture() {
 
   capturePage = browserContext.pages()[0] || (await browserContext.newPage());
   await capturePage.goto(LOGIN_URL, { waitUntil: 'domcontentloaded' });
-  appState.status = captureState ? 'ready' : 'waiting-for-login';
+  appState.status = captureState && !wasSessionExpired ? 'ready' : 'waiting-for-login';
   broadcastState();
 }
 
@@ -267,6 +272,7 @@ async function rememberAuthenticatedRequest(request) {
   if (!appState.testMode && extracted.rank != null) {
     await recordRank(extracted.rank, extracted.path, payload, 'capture');
     appState.status = 'ready';
+    clearSessionExpired();
   } else if (appState.testMode) {
     appState.status = 'test-mode';
   } else {
@@ -296,6 +302,7 @@ async function rememberExtensionCapture(body) {
   await writeJson(capturePath, captureState);
   appState.status = appState.testMode ? 'test-mode' : 'captured';
   appState.error = null;
+  clearSessionExpired();
   broadcastState();
   await pollNow('extension-capture');
 }
@@ -343,6 +350,11 @@ async function pollNow(reason = 'timer') {
     const payload = parseJson(text);
     appState.lastPayloadPreview = previewPayload(payload ?? text);
 
+    if (isSessionExpiredResponse(response.status, text, payload)) {
+      markSessionExpired(sessionExpiredReason(response.status, text));
+      return;
+    }
+
     if (!response.ok) {
       throw new Error(`Fansly rank request returned HTTP ${response.status}. ${trimForUi(text)}`);
     }
@@ -355,13 +367,22 @@ async function pollNow(reason = 'timer') {
     await recordRank(extracted.rank, extracted.path, payload, reason);
     appState.status = 'ready';
     appState.error = null;
+    clearSessionExpired();
   } catch (error) {
     appState.status = 'poll-error';
     appState.error = error.message || String(error);
   } finally {
     appState.lastPollAt = new Date().toISOString();
     pollInFlight = false;
-    scheduleNextPoll(POLL_MS);
+    if (appState.status === 'session-expired') {
+      appState.nextPollAt = null;
+      if (pollTimer) {
+        clearTimeout(pollTimer);
+        pollTimer = null;
+      }
+    } else {
+      scheduleNextPoll(POLL_MS);
+    }
     broadcastState();
   }
 }
@@ -400,6 +421,65 @@ async function refreshLeaderboardInfo() {
       error: error.message || String(error)
     };
   }
+}
+
+function isSessionExpired() {
+  return appState.status === 'session-expired' || Boolean(appState.sessionExpiredAt);
+}
+
+function markSessionExpired(reason) {
+  appState.status = 'session-expired';
+  appState.error = SESSION_EXPIRED_MESSAGE;
+  appState.sessionExpiredAt = new Date().toISOString();
+  appState.sessionExpiredReason = trimForUi(reason || SESSION_EXPIRED_MESSAGE, 180);
+}
+
+function clearSessionExpired() {
+  appState.sessionExpiredAt = null;
+  appState.sessionExpiredReason = null;
+}
+
+function isSessionExpiredResponse(status, text, payload) {
+  if ([401, 403, 419, 440].includes(status)) {
+    return true;
+  }
+
+  const body = typeof text === 'string' ? text : JSON.stringify(payload || '');
+  return bodyLooksLikeSessionExpired(body);
+}
+
+function sessionExpiredReason(status, text) {
+  const detail = trimForUi(text, 220);
+  if ([401, 403, 419, 440].includes(status)) {
+    return detail ? `Fansly returned HTTP ${status}. ${detail}` : `Fansly returned HTTP ${status}.`;
+  }
+  return detail || SESSION_EXPIRED_MESSAGE;
+}
+
+function bodyLooksLikeSessionExpired(value) {
+  const text = String(value || '').toLowerCase();
+  if (!text) {
+    return false;
+  }
+
+  const hasAuthWord =
+    text.includes('unauthorized') ||
+    text.includes('forbidden') ||
+    text.includes('not authenticated') ||
+    text.includes('authentication') ||
+    text.includes('authorization') ||
+    text.includes('login') ||
+    text.includes('sign in') ||
+    text.includes('session') ||
+    text.includes('token');
+  const hasExpiredWord =
+    text.includes('expired') ||
+    text.includes('invalid') ||
+    text.includes('required') ||
+    text.includes('missing') ||
+    text.includes('denied');
+
+  return hasAuthWord && hasExpiredWord;
 }
 
 async function buildReplayHeaders() {
@@ -705,6 +785,7 @@ async function resetAuth() {
   }
 
   captureState = null;
+  clearSessionExpired();
   appState.testMode = false;
   appState.testSnapshot = null;
   await removeIfExists(capturePath);
@@ -742,10 +823,13 @@ async function clearHistory() {
   appState.lastPayloadPreview = null;
   appState.history = [];
   await writeJson(historyPath, appState.history);
-  appState.status = captureState ? 'ready' : 'needs-login';
-  appState.error = captureState
-    ? null
-    : 'Click Start login capture, log in, then open the Fansly leaderboard so the app can capture the authenticated request.';
+  appState.status = isSessionExpired() ? 'session-expired' : captureState ? 'ready' : 'needs-login';
+  appState.error =
+    appState.status === 'session-expired'
+      ? SESSION_EXPIRED_MESSAGE
+      : captureState
+        ? null
+        : 'Click Start login capture, log in, then open the Fansly leaderboard so the app can capture the authenticated request.';
   broadcastState();
 }
 
@@ -778,6 +862,8 @@ function publicState() {
     status: appState.status,
     error: appState.error,
     testMode: appState.testMode,
+    sessionExpiredAt: appState.sessionExpiredAt,
+    sessionExpiredReason: appState.sessionExpiredReason,
     leaderboard: appState.leaderboard,
     overlaySettings: appState.overlaySettings,
     rank: appState.rank,
@@ -824,11 +910,18 @@ function setTestMode(enabled, options = {}) {
     if (snapshot) {
       restoreDisplayState(snapshot);
     }
-    appState.status = captureState ? 'ready' : 'needs-login';
-    appState.error = captureState
-      ? null
-      : 'Click Start login capture, log in, then open the Fansly leaderboard so the app can capture the authenticated request.';
-    scheduleNextPoll(POLL_MS);
+    appState.status = isSessionExpired() ? 'session-expired' : captureState ? 'ready' : 'needs-login';
+    appState.error =
+      appState.status === 'session-expired'
+        ? SESSION_EXPIRED_MESSAGE
+        : captureState
+          ? null
+          : 'Click Start login capture, log in, then open the Fansly leaderboard so the app can capture the authenticated request.';
+    if (appState.status === 'session-expired') {
+      appState.nextPollAt = null;
+    } else {
+      scheduleNextPoll(POLL_MS);
+    }
   }
 
   if (shouldBroadcast) {

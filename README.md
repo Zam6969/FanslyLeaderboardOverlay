@@ -88,6 +88,8 @@ Use the `Overlay customization` panel on the dashboard to change the overlay tit
 
 The login capture starts on `https://fansly.com/`, not `leaderboard.fansly.com`. The dashboard intentionally shows only header names, not token values. Keep the `data/` folder private because it contains local session material.
 
+If Fansly rejects the saved session, the dashboard shows a `Login expired` warning and pauses automatic polling until you run `Start login capture` again.
+
 ## Local Data Encryption
 
 The app encrypts its local JSON data files with AES-256-GCM before writing them to `data/`. Existing plaintext JSON files are migrated automatically on startup. On Windows, the generated encryption key is protected with the current Windows user through DPAPI when available. On other systems, set `FANSLY_OVERLAY_SECRET` before the first run if you want the local key protected by your own secret.

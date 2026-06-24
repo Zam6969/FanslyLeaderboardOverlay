@@ -134,6 +134,11 @@ function clearConfetti() {
 
 function setMovement(movement, status) {
   els.movement.dataset.move = 'same';
+  if (status === 'session-expired') {
+    els.movement.textContent = 'Login expired';
+    els.movement.dataset.move = 'down';
+    return;
+  }
   if (movement == null || status === 'needs-login') {
     els.movement.textContent = status === 'needs-login' ? 'Login needed' : 'Waiting';
     return;
