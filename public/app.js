@@ -55,6 +55,9 @@ els.overlayUrl.textContent = overlayUrl;
 let latestState = null;
 let busy = false;
 let titleSaveTimer;
+let titleSaveInFlight = false;
+let titleSaveQueued = false;
+let titleSaveLastValue = null;
 
 els.startLoginBtn.addEventListener('click', () => post('/api/start-login'));
 els.pollNowBtn.addEventListener('click', () => post('/api/poll-now'));
@@ -132,8 +135,11 @@ fetch(stateUrl)
 
 window.setInterval(() => renderCountdown(latestState), 1000);
 
-async function post(path, requestBody) {
-  setBusy(true);
+async function post(path, requestBody, options = {}) {
+  const showBusy = options.showBusy !== false;
+  if (showBusy) {
+    setBusy(true);
+  }
   try {
     const response = await fetch(path, {
       method: 'POST',
@@ -148,7 +154,9 @@ async function post(path, requestBody) {
   } catch (error) {
     els.errorText.textContent = error.message || String(error);
   } finally {
-    setBusy(false);
+    if (showBusy) {
+      setBusy(false);
+    }
   }
 }
 
@@ -320,9 +328,28 @@ function renderOverlayControls(state) {
 }
 
 function postTitle() {
-  return post('/api/overlay-settings', {
-    title: els.overlayTitleInput.value
+  if (titleSaveInFlight) {
+    titleSaveQueued = true;
+    return Promise.resolve();
+  }
+
+  titleSaveInFlight = true;
+  titleSaveQueued = false;
+  return flushTitleSave().finally(() => {
+    titleSaveInFlight = false;
+    if (titleSaveQueued || els.overlayTitleInput.value !== titleSaveLastValue) {
+      postTitle();
+    }
   });
+}
+
+async function flushTitleSave() {
+  do {
+    titleSaveQueued = false;
+    const title = els.overlayTitleInput.value;
+    await post('/api/overlay-settings', { title }, { showBusy: false });
+    titleSaveLastValue = title;
+  } while (titleSaveQueued);
 }
 
 function postTheme() {
