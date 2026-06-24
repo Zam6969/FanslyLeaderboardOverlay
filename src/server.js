@@ -142,6 +142,14 @@ async function handleRequest(req, res) {
     return sendJson(res, 200, { ok: true, state: publicState() });
   }
 
+  if (url.pathname === '/api/open-browser-login' && req.method === 'POST') {
+    openExternalBrowser(LOGIN_URL);
+    appState.status = captureState ? 'ready' : 'waiting-for-login';
+    appState.error = null;
+    broadcastState();
+    return sendJson(res, 200, { ok: true, state: publicState() });
+  }
+
   if (url.pathname === '/api/poll-now' && req.method === 'POST') {
     await pollNow('manual');
     return sendJson(res, 200, { ok: true, state: publicState() });
@@ -1406,6 +1414,10 @@ function openDashboardBrowser(url) {
     return;
   }
 
+  openExternalBrowser(url);
+}
+
+function openExternalBrowser(url) {
   try {
     const command =
       process.platform === 'win32'
@@ -1421,6 +1433,6 @@ function openDashboardBrowser(url) {
     });
     child.unref();
   } catch (error) {
-    console.warn(`Could not open dashboard automatically: ${error.message || error}`);
+    console.warn(`Could not open browser automatically: ${error.message || error}`);
   }
 }

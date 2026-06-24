@@ -29,6 +29,7 @@ const els = {
   pollInterval: document.querySelector('#pollInterval'),
   errorText: document.querySelector('#errorText'),
   payloadPreview: document.querySelector('#payloadPreview'),
+  openBrowserBtn: document.querySelector('#openBrowserBtn'),
   startLoginBtn: document.querySelector('#startLoginBtn'),
   pollNowBtn: document.querySelector('#pollNowBtn'),
   clearHistoryBtn: document.querySelector('#clearHistoryBtn'),
@@ -59,6 +60,7 @@ let titleSaveInFlight = false;
 let titleSaveQueued = false;
 let titleSaveLastValue = null;
 
+els.openBrowserBtn.addEventListener('click', () => post('/api/open-browser-login'));
 els.startLoginBtn.addEventListener('click', () => post('/api/start-login'));
 els.pollNowBtn.addEventListener('click', () => post('/api/poll-now'));
 els.clearHistoryBtn.addEventListener('click', async () => {
@@ -172,11 +174,11 @@ function render(state) {
   renderSessionWarning(state);
 
   if (sessionExpired) {
-    els.captureHint.textContent = 'Your saved Fansly login expired. Click Start login capture, log in again, then open the leaderboard in that Chromium window.';
+    els.captureHint.textContent = 'Your saved Fansly login expired. Use the browser extension flow or Controlled Chromium capture again, then open the leaderboard to refresh it.';
   } else {
     els.captureHint.textContent = state.capture
       ? `Authenticated headers are encrypted locally from ${labelCaptureSource(state.capture.source).toLowerCase()}. The server polls Fansly every 30 seconds with the replayable request headers.`
-      : 'Click Start login capture, log in on fansly.com, then open the leaderboard inside that Chromium window so the authenticated rank request can be captured and encrypted locally.';
+      : 'Browser tab capture uses the included extension: click Open Fansly in browser, log in if needed, then open the leaderboard in that browser. Controlled Chromium capture is available as a fallback.';
   }
 
   els.capturedAt.textContent = formatTime(state.capture?.capturedAt);
@@ -271,7 +273,7 @@ function renderHeaderChips(headers) {
 
 function setBusy(isBusy) {
   busy = isBusy;
-  for (const button of [els.startLoginBtn, els.pollNowBtn, els.clearHistoryBtn, els.resetBtn]) {
+  for (const button of [els.openBrowserBtn, els.startLoginBtn, els.pollNowBtn, els.clearHistoryBtn, els.resetBtn]) {
     button.disabled = isBusy;
   }
   els.movementToggle.disabled = isBusy;

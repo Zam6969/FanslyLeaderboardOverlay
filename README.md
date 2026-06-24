@@ -80,8 +80,30 @@ Use the `Overlay customization` panel on the dashboard to change the overlay tit
 
 ## Login Capture
 
+### Browser Tab Capture
+
+This is the easiest flow if you already stay logged in with Chrome, Brave, or another Chromium-based browser.
+
+Browsers do not let a local app read private request headers from an ordinary tab by itself. To use your own browser, load the included extension so the browser can capture the Fansly leaderboard request and send it to the local app.
+
+1. Start the app and open the dashboard.
+2. In your Chromium-based browser, open `chrome://extensions/`.
+3. Enable `Developer mode`.
+4. Click `Load unpacked`.
+5. Select the repo's `extension/` folder.
+6. On the dashboard, click `Open Fansly in browser`.
+7. Log in on `fansly.com` if needed.
+8. Open the Fansly leaderboard in that same browser.
+9. Once the extension sees the authenticated request to `getActualUserRank/v1`, the app stores the request headers, response header names, cookies, and rank history encrypted locally under `data/`.
+
+The extension is configured for the default dashboard port `8787`. If you change `PORT`, update the local host permission and `LOCAL_CAPTURE_URL` in `extension/`.
+
+### Controlled Chromium Capture
+
+Use this fallback if you do not want to install the extension or if browser tab capture is not working.
+
 1. Open the dashboard.
-2. Click `Start login capture`.
+2. Click `Controlled Chromium capture`.
 3. A Playwright Chromium window opens. Log in to your own Fansly account there.
 4. Manually open the Fansly leaderboard in that same Chromium window.
 5. Once the app sees the authenticated request to `getActualUserRank/v1`, it stores the request headers, response header names, cookies, and rank history encrypted locally under `data/`.
