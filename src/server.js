@@ -40,12 +40,14 @@ const ENCRYPTION_KEY_FORMAT = 'fansly-obs-overlay/encryption-key-v1';
 const DATA_ENCRYPTION_ALGORITHM = 'aes-256-gcm';
 const PASSPHRASE_KDF_ITERATIONS = 210000;
 const SESSION_EXPIRED_MESSAGE = 'Fansly login expired. Click Start login capture and log in again.';
+const OVERLAY_APPEARANCE_MODES = new Set(['classic', 'pill', 'neon', 'compact']);
 
 const endpointUrl = new URL(ENDPOINT);
 const DEFAULT_OVERLAY_SETTINGS = Object.freeze({
   showHistory: true,
   showMovement: true,
   showCountdown: true,
+  appearanceMode: 'classic',
   title: 'Fansly Leaderboard Rank',
   theme: {
     gradientA: '#59e0aa',
@@ -571,8 +573,11 @@ function mergeOverlaySettings(input, base = createDefaultOverlaySettings()) {
   };
 
   if (!input || typeof input !== 'object') {
+    next.appearanceMode = sanitizeOverlayAppearanceMode(next.appearanceMode, DEFAULT_OVERLAY_SETTINGS.appearanceMode);
     return next;
   }
+
+  next.appearanceMode = sanitizeOverlayAppearanceMode(next.appearanceMode, DEFAULT_OVERLAY_SETTINGS.appearanceMode);
 
   if (typeof input.showHistory === 'boolean') {
     next.showHistory = input.showHistory;
@@ -582,6 +587,9 @@ function mergeOverlaySettings(input, base = createDefaultOverlaySettings()) {
   }
   if (typeof input.showCountdown === 'boolean') {
     next.showCountdown = input.showCountdown;
+  }
+  if (typeof input.appearanceMode === 'string') {
+    next.appearanceMode = sanitizeOverlayAppearanceMode(input.appearanceMode, next.appearanceMode);
   }
   if (typeof input.title === 'string') {
     next.title = sanitizeOverlayTitle(input.title, next.title);
@@ -605,6 +613,14 @@ function sanitizeHexColor(value, fallback) {
     return value.trim().toLowerCase();
   }
   return fallback;
+}
+
+function sanitizeOverlayAppearanceMode(value, fallback) {
+  if (typeof value !== 'string') {
+    return fallback;
+  }
+  const normalized = value.trim().toLowerCase();
+  return OVERLAY_APPEARANCE_MODES.has(normalized) ? normalized : fallback;
 }
 
 function sanitizeOverlayTitle(value, fallback) {

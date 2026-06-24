@@ -23,6 +23,8 @@ const defaultTheme = {
   shine: '#ffffff'
 };
 const defaultOverlayTitle = 'Fansly Leaderboard Rank';
+const defaultAppearanceMode = 'classic';
+const appearanceModes = new Set(['classic', 'pill', 'neon', 'compact']);
 
 const events = new EventSource('/events');
 events.addEventListener('state', event => render(JSON.parse(event.data)));
@@ -53,6 +55,7 @@ function render(state) {
 
   els.rank.textContent = nextRank == null ? '--' : nextRank;
   setTitle(state.overlaySettings?.title);
+  setAppearanceMode(state.overlaySettings?.appearanceMode);
   applyTheme(state.overlaySettings?.theme);
   setMovement(state.movement, state.status);
   renderCountdown(state);
@@ -177,6 +180,11 @@ function renderCountdown(state) {
 
 function setTitle(value) {
   els.title.textContent = typeof value === 'string' && value.trim() ? value.trim() : defaultOverlayTitle;
+}
+
+function setAppearanceMode(value) {
+  const normalized = typeof value === 'string' ? value.toLowerCase() : '';
+  els.root.dataset.appearance = appearanceModes.has(normalized) ? normalized : defaultAppearanceMode;
 }
 
 function applyTheme(theme) {

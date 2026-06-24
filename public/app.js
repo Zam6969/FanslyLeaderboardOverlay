@@ -6,6 +6,8 @@ const defaultTheme = {
   shine: '#ffffff'
 };
 const defaultOverlayTitle = 'Fansly Leaderboard Rank';
+const defaultAppearanceMode = 'classic';
+const appearanceModes = new Set(['classic', 'pill', 'neon', 'compact']);
 
 const els = {
   statusPill: document.querySelector('#statusPill'),
@@ -39,6 +41,7 @@ const els = {
   movementToggle: document.querySelector('#movementToggle'),
   countdownToggle: document.querySelector('#countdownToggle'),
   historyToggle: document.querySelector('#historyToggle'),
+  appearanceModes: [...document.querySelectorAll('input[name="appearanceMode"]')],
   overlayTitleInput: document.querySelector('#overlayTitleInput'),
   gradientAColor: document.querySelector('#gradientAColor'),
   gradientBColor: document.querySelector('#gradientBColor'),
@@ -77,6 +80,13 @@ els.movementToggle.addEventListener('change', () => {
 els.countdownToggle.addEventListener('change', () => {
   post('/api/overlay-settings', { showCountdown: els.countdownToggle.checked });
 });
+for (const input of els.appearanceModes) {
+  input.addEventListener('change', () => {
+    if (input.checked) {
+      post('/api/overlay-settings', { appearanceMode: input.value });
+    }
+  });
+}
 els.overlayTitleInput.addEventListener('input', () => {
   window.clearTimeout(titleSaveTimer);
   titleSaveTimer = window.setTimeout(() => postTitle(), 350);
@@ -259,6 +269,9 @@ function setBusy(isBusy) {
   els.movementToggle.disabled = isBusy;
   els.countdownToggle.disabled = isBusy;
   els.historyToggle.disabled = isBusy;
+  for (const input of els.appearanceModes) {
+    input.disabled = isBusy;
+  }
   els.overlayTitleInput.disabled = isBusy;
   els.gradientAColor.disabled = isBusy;
   els.gradientBColor.disabled = isBusy;
@@ -286,6 +299,11 @@ function renderOverlayControls(state) {
   els.countdownToggle.disabled = busy;
   els.historyToggle.checked = state?.overlaySettings?.showHistory !== false;
   els.historyToggle.disabled = busy;
+  const appearanceMode = normalizedAppearanceMode(state?.overlaySettings?.appearanceMode);
+  for (const input of els.appearanceModes) {
+    input.checked = input.value === appearanceMode;
+    input.disabled = busy;
+  }
   const title = normalizedTitle(state?.overlaySettings?.title);
   if (document.activeElement !== els.overlayTitleInput) {
     els.overlayTitleInput.value = title;
@@ -370,6 +388,11 @@ function normalizedTheme(theme) {
 
 function normalizedTitle(value) {
   return typeof value === 'string' && value.trim() ? value : defaultOverlayTitle;
+}
+
+function normalizedAppearanceMode(value) {
+  const normalized = typeof value === 'string' ? value.toLowerCase() : '';
+  return appearanceModes.has(normalized) ? normalized : defaultAppearanceMode;
 }
 
 function normalizeHex(value, fallback) {

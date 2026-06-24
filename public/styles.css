@@ -323,6 +323,61 @@ h2 {
   width: min(420px, 100%);
 }
 
+.mode-control {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  margin: 16px 0 0;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 4px;
+  background: #15181d;
+}
+
+.mode-control legend {
+  grid-column: 1 / -1;
+  margin: 0 0 8px;
+  padding: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.mode-control label {
+  min-width: 0;
+  color: var(--text);
+}
+
+.mode-control input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.mode-control span {
+  display: grid;
+  place-items: center;
+  min-height: 38px;
+  border-radius: 5px;
+  padding: 0 8px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 850;
+  text-align: center;
+  text-transform: none;
+}
+
+.mode-control input:checked + span {
+  background: rgba(84, 214, 160, 0.18);
+  color: var(--mint);
+}
+
+.mode-control input:focus-visible + span {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+
 .color-control {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 46px;

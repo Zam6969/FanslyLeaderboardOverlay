@@ -302,6 +302,131 @@ body {
   color: var(--rose);
 }
 
+.overlay[data-appearance="pill"] {
+  width: min(650px, calc(100vw - 24px));
+}
+
+.overlay[data-appearance="pill"] .rank-card {
+  min-height: 118px;
+  border-radius: 999px;
+  padding: 17px 22px 17px 28px;
+  background:
+    radial-gradient(circle at 12% 50%, var(--overlay-gradient-a), transparent 32%),
+    linear-gradient(90deg, rgba(13, 16, 22, 0.92), rgba(19, 28, 34, 0.86)),
+    var(--glass);
+}
+
+.overlay[data-appearance="pill"] .kicker {
+  margin-bottom: 2px;
+  font-size: 0.72rem;
+}
+
+.overlay[data-appearance="pill"] .hash {
+  font-size: clamp(1.8rem, 5vw, 3.4rem);
+}
+
+.overlay[data-appearance="pill"] .rank {
+  font-size: clamp(3.7rem, 12vw, 6.2rem);
+}
+
+.overlay[data-appearance="pill"] .movement-pill {
+  min-height: 40px;
+}
+
+.overlay[data-appearance="pill"] .history-item {
+  min-width: 78px;
+  border-radius: 999px;
+  padding: 7px 12px;
+}
+
+.overlay[data-appearance="neon"] .rank-card {
+  border-color: rgba(107, 211, 255, 0.46);
+  background:
+    radial-gradient(circle at 10% 10%, rgba(89, 224, 170, 0.24), transparent 28%),
+    radial-gradient(circle at 92% 86%, rgba(255, 111, 141, 0.17), transparent 30%),
+    linear-gradient(135deg, rgba(9, 11, 18, 0.94), rgba(10, 20, 31, 0.9));
+  box-shadow:
+    0 18px 70px rgba(0, 0, 0, 0.52),
+    0 0 34px rgba(107, 211, 255, 0.18),
+    0 0 0 1px rgba(89, 224, 170, 0.11) inset;
+}
+
+.overlay[data-appearance="neon"] .shine {
+  width: 38%;
+  background: linear-gradient(90deg, transparent, rgba(107, 211, 255, 0.4), transparent);
+}
+
+.overlay[data-appearance="neon"] .hash,
+.overlay[data-appearance="neon"] .rank {
+  text-shadow:
+    0 0 18px rgba(107, 211, 255, 0.38),
+    0 4px 26px rgba(0, 0, 0, 0.42);
+}
+
+.overlay[data-appearance="neon"] .movement-pill,
+.overlay[data-appearance="neon"] .countdown-pill,
+.overlay[data-appearance="neon"] .history-item {
+  box-shadow: 0 0 22px rgba(107, 211, 255, 0.12);
+}
+
+.overlay[data-appearance="compact"] {
+  width: min(440px, calc(100vw - 24px));
+}
+
+.overlay[data-appearance="compact"] .rank-card {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 130px;
+  padding: 16px;
+}
+
+.overlay[data-appearance="compact"] .rank-copy {
+  width: 100%;
+}
+
+.overlay[data-appearance="compact"] .kicker {
+  max-width: 100%;
+  font-size: 0.72rem;
+}
+
+.overlay[data-appearance="compact"] .hash {
+  font-size: clamp(1.7rem, 7vw, 2.9rem);
+}
+
+.overlay[data-appearance="compact"] .rank {
+  font-size: clamp(3.1rem, 14vw, 5.2rem);
+}
+
+.overlay[data-appearance="compact"] .side-stack {
+  align-items: center;
+  flex-direction: row;
+  justify-content: space-between;
+  width: 100%;
+  max-width: none;
+}
+
+.overlay[data-appearance="compact"] .movement-pill {
+  min-height: 34px;
+  padding: 0 13px;
+  font-size: 1rem;
+}
+
+.overlay[data-appearance="compact"] .countdown-pill {
+  min-width: 0;
+  padding: 7px 10px;
+}
+
+.overlay[data-appearance="compact"] .history-strip {
+  min-height: 44px;
+  gap: 6px;
+}
+
+.overlay[data-appearance="compact"] .history-item {
+  min-width: 58px;
+  padding: 5px 7px;
+}
+
 .rank-pulse-up {
   animation: pulseUp 680ms cubic-bezier(0.2, 0.9, 0.2, 1);
 }
