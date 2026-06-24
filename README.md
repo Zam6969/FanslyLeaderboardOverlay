@@ -18,6 +18,16 @@ Overlay rank increase:
 
 ## Run
 
+On Windows, double-click:
+
+```text
+Start Fansly Overlay.cmd
+```
+
+The launcher installs dependencies the first time, then starts the app.
+
+Or run manually:
+
 ```powershell
 npm.cmd install
 npm.cmd start
