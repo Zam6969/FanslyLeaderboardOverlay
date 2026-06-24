@@ -22,6 +22,15 @@ if not exist "node_modules\" (
   )
 )
 
+echo Installing/Checking Playwright Chromium...
+call npx.cmd playwright install chromium
+if errorlevel 1 (
+  echo.
+  echo Playwright Chromium install failed.
+  pause
+  exit /b 1
+)
+
 echo Starting Fansly Leaderboard Overlay...
 echo Dashboard: http://127.0.0.1:8787/
 echo OBS URL:   http://127.0.0.1:8787/overlay
