@@ -340,6 +340,7 @@ body {
 }
 
 .overlay[data-appearance="neon"] .rank-card {
+  isolation: isolate;
   border-color: rgba(107, 211, 255, 0.46);
   background:
     radial-gradient(circle at 10% 10%, rgba(89, 224, 170, 0.24), transparent 28%),
@@ -351,7 +352,30 @@ body {
     0 0 0 1px rgba(89, 224, 170, 0.11) inset;
 }
 
+.overlay[data-appearance="neon"] .rank-card::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: -42%;
+  background:
+    radial-gradient(circle at 18% 24%, var(--overlay-gradient-a), transparent 28%),
+    radial-gradient(circle at 78% 18%, rgba(107, 211, 255, 0.22), transparent 24%),
+    radial-gradient(circle at 78% 82%, var(--overlay-gradient-b), transparent 30%),
+    radial-gradient(circle at 28% 78%, rgba(255, 111, 141, 0.16), transparent 26%);
+  background-size: 120% 120%, 110% 110%, 130% 130%, 115% 115%;
+  filter: blur(10px) saturate(1.22);
+  opacity: 0.88;
+  pointer-events: none;
+  transform: translate3d(-2%, -1%, 0) scale(1.02);
+  animation: neonColorDrift 18s ease-in-out infinite alternate;
+}
+
+.overlay[data-appearance="neon"] .rank-copy {
+  z-index: 2;
+}
+
 .overlay[data-appearance="neon"] .shine {
+  z-index: 1;
   width: 38%;
   background: linear-gradient(90deg, transparent, rgba(107, 211, 255, 0.4), transparent);
 }
@@ -520,6 +544,23 @@ body {
   72%,
   100% {
     transform: translateX(520%) rotate(18deg);
+  }
+}
+
+@keyframes neonColorDrift {
+  0% {
+    background-position: 0% 0%, 85% 10%, 100% 100%, 12% 86%;
+    transform: translate3d(-2%, -1%, 0) scale(1.02) rotate(0deg);
+  }
+  38% {
+    background-position: 30% 18%, 68% 34%, 74% 88%, 28% 64%;
+  }
+  72% {
+    background-position: 64% 42%, 44% 8%, 48% 72%, 8% 36%;
+  }
+  100% {
+    background-position: 100% 68%, 18% 28%, 12% 50%, 42% 10%;
+    transform: translate3d(2%, 1%, 0) scale(1.08) rotate(4deg);
   }
 }
 
