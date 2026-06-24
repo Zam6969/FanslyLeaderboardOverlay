@@ -143,7 +143,10 @@ async function handleRequest(req, res) {
   }
 
   if (url.pathname === '/api/open-browser-login' && req.method === 'POST') {
-    openExternalBrowser(LOGIN_URL);
+    const body = await readRequestJson(req);
+    if (!body.openedFromDashboard) {
+      openExternalBrowser(LOGIN_URL);
+    }
     appState.status = captureState ? 'ready' : 'waiting-for-login';
     appState.error = null;
     broadcastState();

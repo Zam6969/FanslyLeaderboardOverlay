@@ -96,6 +96,8 @@ Browsers do not let a local app read private request headers from an ordinary ta
 8. Open the Fansly leaderboard in that same browser.
 9. Once the extension sees the authenticated request to `getActualUserRank/v1`, the app stores the request headers, response header names, cookies, and rank history encrypted locally under `data/`.
 
+If the browser tab does not open, allow popups for the local dashboard URL or use `Controlled Chromium capture`.
+
 The extension is configured for the default dashboard port `8787`. If you change `PORT`, update the local host permission and `LOCAL_CAPTURE_URL` in `extension/`.
 
 ### Controlled Chromium Capture

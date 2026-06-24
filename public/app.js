@@ -60,7 +60,7 @@ let titleSaveInFlight = false;
 let titleSaveQueued = false;
 let titleSaveLastValue = null;
 
-els.openBrowserBtn.addEventListener('click', () => post('/api/open-browser-login'));
+els.openBrowserBtn.addEventListener('click', () => openFanslyInBrowser());
 els.startLoginBtn.addEventListener('click', () => post('/api/start-login'));
 els.pollNowBtn.addEventListener('click', () => post('/api/poll-now'));
 els.clearHistoryBtn.addEventListener('click', async () => {
@@ -160,6 +160,26 @@ async function post(path, requestBody, options = {}) {
       setBusy(false);
     }
   }
+}
+
+function openFanslyInBrowser() {
+  const loginUrl = latestState?.loginUrl || 'https://fansly.com/';
+  let opened = null;
+
+  try {
+    opened = window.open(loginUrl, '_blank');
+    if (opened) {
+      opened.opener = null;
+    }
+  } catch {
+    opened = null;
+  }
+
+  if (!opened) {
+    els.errorText.textContent = 'If a tab did not open, allow popups for this dashboard or use Controlled Chromium capture.';
+  }
+
+  post('/api/open-browser-login', { openedFromDashboard: Boolean(opened) });
 }
 
 function render(state) {
