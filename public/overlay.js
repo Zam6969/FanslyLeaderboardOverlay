@@ -24,7 +24,7 @@ const defaultTheme = {
 };
 const defaultOverlayTitle = 'Fansly Leaderboard Rank';
 const defaultAppearanceMode = 'classic';
-const appearanceModes = new Set(['classic', 'pill', 'neon', 'compact']);
+const appearanceModes = new Set(['classic', 'pill', 'neon', 'logo', 'compact']);
 
 const events = new EventSource('/events');
 events.addEventListener('state', event => render(JSON.parse(event.data)));

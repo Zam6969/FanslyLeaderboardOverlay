@@ -393,6 +393,68 @@ body {
   box-shadow: 0 0 22px rgba(107, 211, 255, 0.12);
 }
 
+.overlay[data-appearance="logo"] .rank-card {
+  isolation: isolate;
+  border-color: rgba(42, 157, 244, 0.34);
+  background:
+    linear-gradient(115deg, rgba(42, 157, 244, 0.18), transparent 40%),
+    linear-gradient(285deg, var(--overlay-gradient-b), transparent 48%),
+    rgba(10, 14, 20, 0.84);
+  box-shadow:
+    0 18px 64px rgba(0, 0, 0, 0.48),
+    0 0 38px rgba(42, 157, 244, 0.13);
+}
+
+.overlay[data-appearance="logo"] .rank-card::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: -22px -34px -28px 30%;
+  background: url("/assets/fansly-logo.webp") center / contain no-repeat;
+  filter: blur(2px) drop-shadow(0 0 24px rgba(42, 157, 244, 0.36));
+  opacity: 0.18;
+  pointer-events: none;
+  transform: rotate(-8deg) scale(1.08);
+}
+
+.overlay[data-appearance="logo"] .rank-card::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  background:
+    radial-gradient(circle at 76% 48%, rgba(42, 157, 244, 0.18), transparent 38%),
+    linear-gradient(90deg, rgba(10, 14, 20, 0.24), transparent 54%);
+  pointer-events: none;
+}
+
+.overlay[data-appearance="logo"] .shine {
+  z-index: 1;
+  background: linear-gradient(90deg, transparent, rgba(42, 157, 244, 0.28), transparent);
+}
+
+.overlay[data-appearance="logo"] .rank-copy {
+  z-index: 2;
+}
+
+.overlay[data-appearance="logo"] .hash {
+  color: #2a9df4;
+  text-shadow: 0 0 18px rgba(42, 157, 244, 0.28);
+}
+
+.overlay[data-appearance="logo"] .rank {
+  text-shadow:
+    0 0 28px rgba(42, 157, 244, 0.22),
+    0 4px 24px rgba(0, 0, 0, 0.36);
+}
+
+.overlay[data-appearance="logo"] .movement-pill,
+.overlay[data-appearance="logo"] .countdown-pill,
+.overlay[data-appearance="logo"] .history-item {
+  border-color: rgba(42, 157, 244, 0.28);
+  box-shadow: 0 0 22px rgba(42, 157, 244, 0.1);
+}
+
 .overlay[data-appearance="compact"] {
   width: min(440px, calc(100vw - 24px));
 }

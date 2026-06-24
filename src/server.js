@@ -40,7 +40,7 @@ const ENCRYPTION_KEY_FORMAT = 'fansly-obs-overlay/encryption-key-v1';
 const DATA_ENCRYPTION_ALGORITHM = 'aes-256-gcm';
 const PASSPHRASE_KDF_ITERATIONS = 210000;
 const SESSION_EXPIRED_MESSAGE = 'Fansly login expired. Click Start login capture and log in again.';
-const OVERLAY_APPEARANCE_MODES = new Set(['classic', 'pill', 'neon', 'compact']);
+const OVERLAY_APPEARANCE_MODES = new Set(['classic', 'pill', 'neon', 'logo', 'compact']);
 
 const endpointUrl = new URL(ENDPOINT);
 const DEFAULT_OVERLAY_SETTINGS = Object.freeze({
@@ -1010,7 +1010,8 @@ function contentType(filePath) {
       '.css': 'text/css; charset=utf-8',
       '.js': 'text/javascript; charset=utf-8',
       '.json': 'application/json; charset=utf-8',
-      '.svg': 'image/svg+xml'
+      '.svg': 'image/svg+xml',
+      '.webp': 'image/webp'
     }[ext] || 'application/octet-stream'
   );
 }

@@ -76,7 +76,7 @@ The dashboard can hide the movement badge (`+1`, `-1`, `No change`), countdown, 
 
 ## Overlay Customization
 
-Use the `Overlay customization` panel on the dashboard to change the overlay title, appearance mode, the two background gradient colors, and the animated swipe color. These settings are saved locally under `data/`, so they survive app restarts without being included in the repository.
+Use the `Overlay customization` panel on the dashboard to change the overlay title, appearance mode, the two background gradient colors, and the animated swipe color. Appearance modes include Classic, Pill, Neon, Logo, and Compact. These settings are saved locally under `data/`, so they survive app restarts without being included in the repository.
 
 ## Login Capture
 
