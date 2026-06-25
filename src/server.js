@@ -49,6 +49,7 @@ const PASSPHRASE_KDF_ITERATIONS = 210000;
 const SESSION_EXPIRED_MESSAGE = 'Fansly login expired. Click Start login capture and log in again.';
 const OVERLAY_APPEARANCE_MODES = new Set(['classic', 'pill', 'neon', 'logo', 'compact', 'pop']);
 const OVERLAY_MOVEMENT_RANGES = new Set(['last-change', 'last-hour', 'stream']);
+const OVERLAY_POP_VARIANTS = new Set(['default', 'pill', 'logo']);
 
 const endpointUrl = new URL(ENDPOINT);
 const DEFAULT_OVERLAY_SETTINGS = Object.freeze({
@@ -57,6 +58,7 @@ const DEFAULT_OVERLAY_SETTINGS = Object.freeze({
   showCountdown: true,
   movementRange: 'stream',
   appearanceMode: 'classic',
+  popVariant: 'default',
   widthScale: 1,
   title: 'Fansly Leaderboard Rank',
   theme: {
@@ -731,12 +733,14 @@ function mergeOverlaySettings(input, base = createDefaultOverlaySettings()) {
   if (!input || typeof input !== 'object') {
     next.appearanceMode = sanitizeOverlayAppearanceMode(next.appearanceMode, DEFAULT_OVERLAY_SETTINGS.appearanceMode);
     next.movementRange = sanitizeOverlayMovementRange(next.movementRange, DEFAULT_OVERLAY_SETTINGS.movementRange);
+    next.popVariant = sanitizeOverlayPopVariant(next.popVariant, DEFAULT_OVERLAY_SETTINGS.popVariant);
     next.widthScale = sanitizeOverlayWidthScale(next.widthScale, DEFAULT_OVERLAY_SETTINGS.widthScale);
     return next;
   }
 
   next.appearanceMode = sanitizeOverlayAppearanceMode(next.appearanceMode, DEFAULT_OVERLAY_SETTINGS.appearanceMode);
   next.movementRange = sanitizeOverlayMovementRange(next.movementRange, DEFAULT_OVERLAY_SETTINGS.movementRange);
+  next.popVariant = sanitizeOverlayPopVariant(next.popVariant, DEFAULT_OVERLAY_SETTINGS.popVariant);
   next.widthScale = sanitizeOverlayWidthScale(next.widthScale, DEFAULT_OVERLAY_SETTINGS.widthScale);
 
   if (typeof input.showHistory === 'boolean') {
@@ -753,6 +757,9 @@ function mergeOverlaySettings(input, base = createDefaultOverlaySettings()) {
   }
   if (typeof input.appearanceMode === 'string') {
     next.appearanceMode = sanitizeOverlayAppearanceMode(input.appearanceMode, next.appearanceMode);
+  }
+  if (typeof input.popVariant === 'string') {
+    next.popVariant = sanitizeOverlayPopVariant(input.popVariant, next.popVariant);
   }
   if (input.widthScale != null) {
     next.widthScale = sanitizeOverlayWidthScale(input.widthScale, next.widthScale);
@@ -795,6 +802,14 @@ function sanitizeOverlayMovementRange(value, fallback) {
   }
   const normalized = value.trim().toLowerCase();
   return OVERLAY_MOVEMENT_RANGES.has(normalized) ? normalized : fallback;
+}
+
+function sanitizeOverlayPopVariant(value, fallback) {
+  if (typeof value !== 'string') {
+    return fallback;
+  }
+  const normalized = value.trim().toLowerCase();
+  return OVERLAY_POP_VARIANTS.has(normalized) ? normalized : fallback;
 }
 
 function sanitizeOverlayWidthScale(value, fallback) {

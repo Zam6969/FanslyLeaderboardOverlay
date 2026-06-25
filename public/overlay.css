@@ -100,6 +100,13 @@ body {
   text-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
 }
 
+.overlay[data-top-rank="true"] .rank {
+  color: #ffd166;
+  text-shadow:
+    0 0 18px rgba(255, 209, 102, 0.42),
+    0 4px 28px rgba(0, 0, 0, 0.42);
+}
+
 .arrow-field {
   position: absolute;
   z-index: 2;
@@ -556,6 +563,66 @@ body {
     0 0 0 1px rgba(255, 255, 255, 0.06) inset;
 }
 
+.overlay[data-appearance="pop"][data-pop-variant="pill"] .rank-card {
+  min-height: 104px;
+  border-radius: 999px;
+  padding: 15px 22px 15px 28px;
+  background:
+    radial-gradient(circle at 12% 50%, var(--overlay-gradient-a), transparent 32%),
+    linear-gradient(90deg, rgba(13, 16, 22, 0.94), rgba(19, 28, 34, 0.88)),
+    var(--glass);
+}
+
+.overlay[data-appearance="pop"][data-pop-variant="pill"] .movement-pill {
+  min-height: 38px;
+}
+
+.overlay[data-appearance="pop"][data-pop-variant="logo"] .rank-card {
+  isolation: isolate;
+  border-color: rgba(42, 157, 244, 0.34);
+  background:
+    linear-gradient(115deg, rgba(42, 157, 244, 0.2), transparent 42%),
+    linear-gradient(285deg, var(--overlay-gradient-b), transparent 48%),
+    rgba(10, 14, 20, 0.9);
+  box-shadow:
+    0 20px 70px rgba(0, 0, 0, 0.52),
+    0 0 40px rgba(42, 157, 244, 0.14);
+}
+
+.overlay[data-appearance="pop"][data-pop-variant="logo"] .rank-card::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: -20px -34px -28px 28%;
+  background: url("/assets/fansly-logo.webp") center / contain no-repeat;
+  filter: blur(2px) drop-shadow(0 0 24px rgba(42, 157, 244, 0.36));
+  opacity: 0.18;
+  pointer-events: none;
+  transform: rotate(-8deg) scale(1.08);
+}
+
+.overlay[data-appearance="pop"][data-pop-variant="logo"] .rank-card::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  background:
+    radial-gradient(circle at 76% 48%, rgba(42, 157, 244, 0.18), transparent 38%),
+    linear-gradient(90deg, rgba(10, 14, 20, 0.24), transparent 54%);
+  pointer-events: none;
+}
+
+.overlay[data-appearance="pop"][data-pop-variant="logo"] .shine,
+.overlay[data-appearance="pop"][data-pop-variant="logo"] .rank-copy,
+.overlay[data-appearance="pop"][data-pop-variant="logo"] .side-stack {
+  z-index: 2;
+}
+
+.overlay[data-appearance="pop"][data-pop-variant="logo"] .hash {
+  color: #2a9df4;
+  text-shadow: 0 0 18px rgba(42, 157, 244, 0.28);
+}
+
 .overlay[data-appearance="pop"] .kicker {
   font-size: 0.72rem;
 }
@@ -580,6 +647,13 @@ body {
 
 .overlay[data-appearance="pop"] .history-strip {
   display: none;
+}
+
+.overlay[data-top-rank="true"] .rank {
+  color: #ffd166;
+  text-shadow:
+    0 0 18px rgba(255, 209, 102, 0.42),
+    0 4px 28px rgba(0, 0, 0, 0.42);
 }
 
 .rank-pulse-up {

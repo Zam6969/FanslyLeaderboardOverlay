@@ -27,6 +27,8 @@ const defaultTheme = {
 const defaultOverlayTitle = 'Fansly Leaderboard Rank';
 const defaultAppearanceMode = 'classic';
 const appearanceModes = new Set(['classic', 'pill', 'neon', 'logo', 'compact', 'pop']);
+const defaultPopVariant = 'default';
+const popVariants = new Set(['default', 'pill', 'logo']);
 const appearanceBaseWidths = {
   classic: 620,
   pill: 650,
@@ -68,8 +70,10 @@ function render(state) {
 
   const appearanceMode = normalizedAppearanceMode(state.overlaySettings?.appearanceMode);
   els.rank.textContent = nextRank == null ? '--' : nextRank;
+  els.root.dataset.topRank = isTopRank(nextRank) ? 'true' : 'false';
   setTitle(state.overlaySettings?.title);
   setAppearanceMode(appearanceMode);
+  setPopVariant(appearanceMode, state.overlaySettings?.popVariant);
   applyLayout(appearanceMode, state.overlaySettings?.widthScale);
   applyTheme(state.overlaySettings?.theme);
   const movementSummary =
@@ -223,9 +227,18 @@ function setAppearanceMode(value) {
   els.root.dataset.appearance = normalizedAppearanceMode(value);
 }
 
+function setPopVariant(appearanceMode, value) {
+  els.root.dataset.popVariant = appearanceMode === 'pop' ? normalizedPopVariant(value) : defaultPopVariant;
+}
+
 function normalizedAppearanceMode(value) {
   const normalized = typeof value === 'string' ? value.toLowerCase() : '';
   return appearanceModes.has(normalized) ? normalized : defaultAppearanceMode;
+}
+
+function normalizedPopVariant(value) {
+  const normalized = typeof value === 'string' ? value.toLowerCase() : '';
+  return popVariants.has(normalized) ? normalized : defaultPopVariant;
 }
 
 function applyLayout(appearanceMode, widthScale) {
@@ -240,6 +253,10 @@ function normalizedWidthScale(value) {
     return 1;
   }
   return Math.min(1.15, Math.max(0.65, Math.round(number * 20) / 20));
+}
+
+function isTopRank(rank) {
+  return Number.isFinite(rank) && rank >= 1 && rank <= 500;
 }
 
 function handlePopVisibility(appearanceMode, changeDirection) {

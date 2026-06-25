@@ -8,9 +8,19 @@ const defaultTheme = {
 const defaultOverlayTitle = 'Fansly Leaderboard Rank';
 const defaultAppearanceMode = 'classic';
 const appearanceModes = new Set(['classic', 'pill', 'neon', 'logo', 'compact', 'pop']);
+const popVariants = new Set(['default', 'pill', 'logo']);
 const defaultMovementRange = 'stream';
 const movementRanges = new Set(['last-change', 'last-hour', 'stream']);
 const defaultWidthScale = 1;
+const defaultPopVariant = 'default';
+const appearanceBaseWidths = {
+  classic: 620,
+  pill: 650,
+  neon: 620,
+  logo: 620,
+  compact: 440,
+  pop: 520
+};
 
 const els = {
   statusPill: document.querySelector('#statusPill'),
@@ -49,6 +59,7 @@ const els = {
   historyToggle: document.querySelector('#historyToggle'),
   movementRangeSelect: document.querySelector('#movementRangeSelect'),
   appearanceModes: [...document.querySelectorAll('input[name="appearanceMode"]')],
+  popVariants: [...document.querySelectorAll('input[name="popVariant"]')],
   overlayTitleInput: document.querySelector('#overlayTitleInput'),
   overlayWidthInput: document.querySelector('#overlayWidthInput'),
   overlayWidthValue: document.querySelector('#overlayWidthValue'),
@@ -69,6 +80,10 @@ let titleSaveTimer;
 let titleSaveInFlight = false;
 let titleSaveQueued = false;
 let titleSaveLastValue = null;
+let widthSaveTimer;
+let widthSaveInFlight = false;
+let widthSaveQueued = false;
+let widthSaveLastValue = null;
 
 els.openBrowserBtn.addEventListener('click', () => openFanslyInBrowser());
 els.startLoginBtn.addEventListener('click', () => post('/api/start-login'));
@@ -105,6 +120,13 @@ for (const input of els.appearanceModes) {
     }
   });
 }
+for (const input of els.popVariants) {
+  input.addEventListener('change', () => {
+    if (input.checked) {
+      post('/api/overlay-settings', { popVariant: input.value });
+    }
+  });
+}
 els.overlayTitleInput.addEventListener('input', () => {
   window.clearTimeout(titleSaveTimer);
   titleSaveTimer = window.setTimeout(() => postTitle(), 350);
@@ -114,10 +136,13 @@ els.overlayTitleInput.addEventListener('change', () => {
   postTitle();
 });
 els.overlayWidthInput.addEventListener('input', () => {
-  renderWidthLabel(normalizedWidthScale(Number(els.overlayWidthInput.value) / 100));
+  const widthScale = currentOverlayWidthScale();
+  renderWidthLabel(widthScale);
+  applyPreviewWidth(widthScale);
+  queueWidthSave(90);
 });
 els.overlayWidthInput.addEventListener('change', () => {
-  post('/api/overlay-settings', { widthScale: normalizedWidthScale(Number(els.overlayWidthInput.value) / 100) });
+  queueWidthSave(0);
 });
 els.gradientAColor.addEventListener('change', () => postTheme());
 els.gradientBColor.addEventListener('change', () => postTheme());
@@ -354,6 +379,9 @@ function setBusy(isBusy) {
   for (const input of els.appearanceModes) {
     input.disabled = isBusy;
   }
+  for (const input of els.popVariants) {
+    input.disabled = isBusy;
+  }
   els.overlayTitleInput.disabled = isBusy;
   els.overlayWidthInput.disabled = isBusy;
   els.gradientAColor.disabled = isBusy;
@@ -390,15 +418,22 @@ function renderOverlayControls(state) {
     input.checked = input.value === appearanceMode;
     input.disabled = busy;
   }
+  const popVariant = normalizedPopVariant(state?.overlaySettings?.popVariant);
+  for (const input of els.popVariants) {
+    input.checked = input.value === popVariant;
+    input.disabled = busy;
+  }
   const title = normalizedTitle(state?.overlaySettings?.title);
   if (document.activeElement !== els.overlayTitleInput) {
     els.overlayTitleInput.value = title;
   }
   els.overlayTitleInput.disabled = busy;
   const widthScale = normalizedWidthScale(state?.overlaySettings?.widthScale);
-  els.overlayWidthInput.value = Math.round(widthScale * 100);
+  if (document.activeElement !== els.overlayWidthInput) {
+    els.overlayWidthInput.value = Math.round(widthScale * 100);
+  }
   els.overlayWidthInput.disabled = busy;
-  renderWidthLabel(widthScale);
+  renderWidthLabel(document.activeElement === els.overlayWidthInput ? currentOverlayWidthScale() : widthScale);
   const theme = normalizedTheme(state?.overlaySettings?.theme);
   els.gradientAColor.value = theme.gradientA;
   els.gradientBColor.value = theme.gradientB;
@@ -436,6 +471,36 @@ async function flushTitleSave() {
     await post('/api/overlay-settings', { title }, { showBusy: false });
     titleSaveLastValue = title;
   } while (titleSaveQueued);
+}
+
+function queueWidthSave(delayMs) {
+  window.clearTimeout(widthSaveTimer);
+  widthSaveTimer = window.setTimeout(() => postWidth(), delayMs);
+}
+
+function postWidth() {
+  if (widthSaveInFlight) {
+    widthSaveQueued = true;
+    return Promise.resolve();
+  }
+
+  widthSaveInFlight = true;
+  widthSaveQueued = false;
+  return flushWidthSave().finally(() => {
+    widthSaveInFlight = false;
+    if (widthSaveQueued || currentOverlayWidthScale() !== widthSaveLastValue) {
+      postWidth();
+    }
+  });
+}
+
+async function flushWidthSave() {
+  do {
+    widthSaveQueued = false;
+    const widthScale = currentOverlayWidthScale();
+    await post('/api/overlay-settings', { widthScale }, { showBusy: false });
+    widthSaveLastValue = widthScale;
+  } while (widthSaveQueued);
 }
 
 function postTheme() {
@@ -491,6 +556,20 @@ function trimForUi(value, maxLength = 700) {
   return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
 }
 
+function currentOverlayWidthScale() {
+  return normalizedWidthScale(Number(els.overlayWidthInput.value) / 100);
+}
+
+function applyPreviewWidth(widthScale) {
+  const previewRoot = els.overlayPreview.contentDocument?.querySelector('#overlayRoot');
+  if (!previewRoot) {
+    return;
+  }
+  const appearanceMode = normalizedAppearanceMode(latestState?.overlaySettings?.appearanceMode);
+  const baseWidth = appearanceBaseWidths[appearanceMode] || appearanceBaseWidths[defaultAppearanceMode];
+  previewRoot.style.setProperty('--overlay-width', `${Math.round(baseWidth * widthScale)}px`);
+}
+
 function normalizedTheme(theme) {
   return {
     gradientA: normalizeHex(theme?.gradientA, defaultTheme.gradientA),
@@ -506,6 +585,11 @@ function normalizedTitle(value) {
 function normalizedAppearanceMode(value) {
   const normalized = typeof value === 'string' ? value.toLowerCase() : '';
   return appearanceModes.has(normalized) ? normalized : defaultAppearanceMode;
+}
+
+function normalizedPopVariant(value) {
+  const normalized = typeof value === 'string' ? value.toLowerCase() : '';
+  return popVariants.has(normalized) ? normalized : defaultPopVariant;
 }
 
 function normalizedMovementRange(value) {
