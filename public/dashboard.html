@@ -68,6 +68,14 @@
               <input id="historyToggle" type="checkbox" />
               <span>Show history strip</span>
             </label>
+            <label class="select-control" for="movementRangeSelect">
+              <span>Movement badge range</span>
+              <select id="movementRangeSelect">
+                <option value="last-change">Last change</option>
+                <option value="last-hour">Last hour</option>
+                <option value="stream">Current stream</option>
+              </select>
+            </label>
           </div>
           <p class="hint" id="captureHint">
             Install the browser extension, click Open Fansly in browser, then open the leaderboard in that browser so the app can capture your authenticated rank request. Controlled Chromium is the fallback capture mode.
@@ -153,6 +161,7 @@
             <div><dt>Last poll</dt><dd id="lastPollAt">--</dd></div>
             <div><dt>Next poll</dt><dd id="nextPollAt">--</dd></div>
             <div><dt>Interval</dt><dd id="pollInterval">30 seconds</dd></div>
+            <div><dt>Stream</dt><dd id="streamStatus">--</dd></div>
           </dl>
           <p class="error" id="errorText"></p>
           <pre class="payload" id="payloadPreview"></pre>

@@ -8,6 +8,8 @@ const defaultTheme = {
 const defaultOverlayTitle = 'Fansly Leaderboard Rank';
 const defaultAppearanceMode = 'classic';
 const appearanceModes = new Set(['classic', 'pill', 'neon', 'logo', 'compact']);
+const defaultMovementRange = 'last-change';
+const movementRanges = new Set(['last-change', 'last-hour', 'stream']);
 
 const els = {
   statusPill: document.querySelector('#statusPill'),
@@ -27,6 +29,7 @@ const els = {
   lastPollAt: document.querySelector('#lastPollAt'),
   nextPollAt: document.querySelector('#nextPollAt'),
   pollInterval: document.querySelector('#pollInterval'),
+  streamStatus: document.querySelector('#streamStatus'),
   errorText: document.querySelector('#errorText'),
   payloadPreview: document.querySelector('#payloadPreview'),
   openBrowserBtn: document.querySelector('#openBrowserBtn'),
@@ -42,6 +45,7 @@ const els = {
   movementToggle: document.querySelector('#movementToggle'),
   countdownToggle: document.querySelector('#countdownToggle'),
   historyToggle: document.querySelector('#historyToggle'),
+  movementRangeSelect: document.querySelector('#movementRangeSelect'),
   appearanceModes: [...document.querySelectorAll('input[name="appearanceMode"]')],
   overlayTitleInput: document.querySelector('#overlayTitleInput'),
   gradientAColor: document.querySelector('#gradientAColor'),
@@ -84,6 +88,9 @@ els.movementToggle.addEventListener('change', () => {
 });
 els.countdownToggle.addEventListener('change', () => {
   post('/api/overlay-settings', { showCountdown: els.countdownToggle.checked });
+});
+els.movementRangeSelect.addEventListener('change', () => {
+  post('/api/overlay-settings', { movementRange: els.movementRangeSelect.value });
 });
 for (const input of els.appearanceModes) {
   input.addEventListener('change', () => {
@@ -188,9 +195,10 @@ function render(state) {
   els.statusPill.textContent = labelStatus(state.status);
   els.statusPill.dataset.state = sessionExpired ? 'session-expired' : state.error ? 'error' : state.status;
   els.rankNumber.textContent = state.rank == null ? '--' : `#${state.rank}`;
-  renderMovement(els.movementBadge, state.movement);
+  renderMovement(els.movementBadge, state.movementSummary || { value: state.movement, label: 'Last change' });
   renderHistory(state.history || []);
   renderCountdown(state);
+  renderStreamStatus(state.stream);
   renderSessionWarning(state);
 
   if (sessionExpired) {
@@ -228,25 +236,55 @@ function renderSessionWarning(state) {
     `Fansly rejected the saved session. Start login capture and log in again to refresh it.${detail}`;
 }
 
-function renderMovement(target, movement) {
+function renderMovement(target, movementSummary) {
   target.className = 'movement';
+  const movement = movementSummary?.value;
+  target.title = movementSummary?.label || '';
   if (movement == null) {
+    target.textContent = movementSummary?.label || 'No movement yet';
+    if (movementSummary?.range === 'stream') {
+      target.classList.add('same');
+    }
+    return;
+  }
+  if (movementSummary?.sampleCount === 0) {
     target.textContent = 'No movement yet';
     return;
   }
   if (movement > 0) {
-    target.textContent = `Up ${movement} place${movement === 1 ? '' : 's'}`;
+    target.textContent = `Up ${movement} place${movement === 1 ? '' : 's'}${movementSummary?.shortLabel ? ` (${movementSummary.shortLabel})` : ''}`;
     target.classList.add('up');
     return;
   }
   if (movement < 0) {
     const places = Math.abs(movement);
-    target.textContent = `Down ${places} place${places === 1 ? '' : 's'}`;
+    target.textContent = `Down ${places} place${places === 1 ? '' : 's'}${movementSummary?.shortLabel ? ` (${movementSummary.shortLabel})` : ''}`;
     target.classList.add('down');
     return;
   }
-  target.textContent = 'No change';
+  target.textContent = movementSummary?.shortLabel ? `No change (${movementSummary.shortLabel})` : 'No change';
   target.classList.add('same');
+}
+
+function renderStreamStatus(stream) {
+  if (!stream) {
+    els.streamStatus.textContent = '--';
+    return;
+  }
+  if (stream.error) {
+    els.streamStatus.textContent = trimForUi(stream.error, 80);
+    return;
+  }
+  if (stream.isLive) {
+    const viewerText = Number.isFinite(stream.viewerCount) ? `, ${stream.viewerCount} viewers` : '';
+    els.streamStatus.textContent = `Live since ${formatTime(stream.startedAt)}${viewerText}`;
+    return;
+  }
+  if (stream.lastUpdatedAt) {
+    els.streamStatus.textContent = `Offline, checked ${formatTime(stream.lastUpdatedAt)}`;
+    return;
+  }
+  els.streamStatus.textContent = '--';
 }
 
 function renderHistory(history) {
@@ -299,6 +337,7 @@ function setBusy(isBusy) {
   els.movementToggle.disabled = isBusy;
   els.countdownToggle.disabled = isBusy;
   els.historyToggle.disabled = isBusy;
+  els.movementRangeSelect.disabled = isBusy;
   for (const input of els.appearanceModes) {
     input.disabled = isBusy;
   }
@@ -329,6 +368,8 @@ function renderOverlayControls(state) {
   els.countdownToggle.disabled = busy;
   els.historyToggle.checked = state?.overlaySettings?.showHistory !== false;
   els.historyToggle.disabled = busy;
+  els.movementRangeSelect.value = normalizedMovementRange(state?.overlaySettings?.movementRange);
+  els.movementRangeSelect.disabled = busy;
   const appearanceMode = normalizedAppearanceMode(state?.overlaySettings?.appearanceMode);
   for (const input of els.appearanceModes) {
     input.checked = input.value === appearanceMode;
@@ -442,6 +483,11 @@ function normalizedTitle(value) {
 function normalizedAppearanceMode(value) {
   const normalized = typeof value === 'string' ? value.toLowerCase() : '';
   return appearanceModes.has(normalized) ? normalized : defaultAppearanceMode;
+}
+
+function normalizedMovementRange(value) {
+  const normalized = typeof value === 'string' ? value.toLowerCase() : '';
+  return movementRanges.has(normalized) ? normalized : defaultMovementRange;
 }
 
 function normalizeHex(value, fallback) {

@@ -57,7 +57,7 @@ function render(state) {
   setTitle(state.overlaySettings?.title);
   setAppearanceMode(state.overlaySettings?.appearanceMode);
   applyTheme(state.overlaySettings?.theme);
-  setMovement(state.movement, state.status);
+  setMovement(state.movementSummary || { value: state.movement, range: 'last-change' }, state.status);
   renderCountdown(state);
   els.root.classList.toggle('movement-hidden', state.overlaySettings?.showMovement === false);
   els.root.classList.toggle('countdown-hidden', state.overlaySettings?.showCountdown === false);
@@ -135,28 +135,45 @@ function clearConfetti() {
   els.confettiField.innerHTML = '';
 }
 
-function setMovement(movement, status) {
+function setMovement(movementSummary, status) {
   els.movement.dataset.move = 'same';
+  els.movement.innerHTML = '';
   if (status === 'session-expired') {
     els.movement.textContent = 'Login expired';
     els.movement.dataset.move = 'down';
     return;
   }
+  const movement = movementSummary?.value;
   if (movement == null || status === 'needs-login') {
-    els.movement.textContent = status === 'needs-login' ? 'Login needed' : 'Waiting';
+    els.movement.textContent = status === 'needs-login' ? 'Login needed' : (movementSummary?.shortLabel || 'Waiting');
     return;
   }
   if (movement > 0) {
-    els.movement.textContent = `+${movement}`;
+    setMovementContent(`+${movement}`, movementSummary.shortLabel);
     els.movement.dataset.move = 'up';
     return;
   }
   if (movement < 0) {
-    els.movement.textContent = `${movement}`;
+    setMovementContent(`${movement}`, movementSummary.shortLabel);
     els.movement.dataset.move = 'down';
     return;
   }
-  els.movement.textContent = 'No change';
+  if (movementSummary?.range === 'last-change') {
+    els.movement.textContent = 'No change';
+    return;
+  }
+  setMovementContent('0', movementSummary.shortLabel);
+}
+
+function setMovementContent(value, label) {
+  const strong = document.createElement('strong');
+  strong.textContent = value;
+  els.movement.append(strong);
+  if (label) {
+    const span = document.createElement('span');
+    span.textContent = label;
+    els.movement.append(span);
+  }
 }
 
 function setHistory(history) {

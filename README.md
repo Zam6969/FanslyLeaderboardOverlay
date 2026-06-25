@@ -1,6 +1,6 @@
 # Fansly OBS Leaderboard Overlay
 
-Local app for an OBS browser source that displays your Fansly leaderboard rank, updates every 30 seconds, shows movement since the last poll, keeps a short rank history, and counts down to the current leaderboard end time.
+Local app for an OBS browser source that displays your Fansly leaderboard rank, updates every 30 seconds, shows configurable movement tracking, keeps rank history, and counts down to the current leaderboard end time.
 
 ## Preview
 
@@ -74,6 +74,12 @@ Live polling pauses while test mode is on. Test ranks are not saved into the rea
 
 The dashboard can hide the movement badge (`+1`, `-1`, `No change`), countdown, and history strip independently. The rank stays visible.
 
+The movement badge range can be changed between:
+
+- `Last change`: movement since the previous poll.
+- `Last hour`: movement compared with roughly one hour ago.
+- `Current stream`: movement since the current Fansly live stream started. The app checks stream status every few minutes with the captured Fansly auth. If the account is offline, the badge shows `Offline`.
+
 ## Overlay Customization
 
 Use the `Overlay customization` panel on the dashboard to change the overlay title, appearance mode, the two background gradient colors, and the animated swipe color. Appearance modes include Classic, Pill, Neon, Logo, and Compact. These settings are saved locally under `data/`, so they survive app restarts without being included in the repository.
@@ -127,8 +133,11 @@ You can override defaults with environment variables before starting:
 ```powershell
 $env:PORT = "8787"
 $env:POLL_MS = "30000"
+$env:STREAM_POLL_MS = "180000"
 $env:FANSLY_RANK_ENDPOINT = "https://leaderboard.fansly.com/leaderboard/getActualUserRank/v1/?ngsw-bypass=true"
 $env:FANSLY_LEADERBOARD_INFO_ENDPOINT = "https://leaderboard.fansly.com/leaderboard/getCurrentLeaderboard/v1/?v=1&ngsw-bypass=true"
+$env:FANSLY_ACCOUNT_ME_ENDPOINT = "https://apiv3.fansly.com/api/v1/account/me?ngsw-bypass=true"
+$env:FANSLY_STREAM_CHANNEL_ENDPOINT = "https://apiv3.fansly.com/api/v1/streaming/channel/{ID}?ngsw-bypass=true"
 $env:FANSLY_OVERLAY_SECRET = "optional local encryption secret"
 npm.cmd start
 ```

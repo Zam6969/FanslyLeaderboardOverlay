@@ -56,6 +56,17 @@ input {
   font: inherit;
 }
 
+select {
+  min-height: 42px;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 0 12px;
+  background: #111318;
+  color: var(--text);
+  font: inherit;
+}
+
 input[type="checkbox"] {
   width: 18px;
   min-height: 18px;
@@ -250,6 +261,20 @@ h2 {
   flex-wrap: wrap;
   gap: 10px;
   margin-top: 10px;
+}
+
+.select-control {
+  display: grid;
+  gap: 6px;
+  width: min(270px, 100%);
+  text-transform: none;
+}
+
+.select-control span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 850;
+  text-transform: uppercase;
 }
 
 .toggle-row {

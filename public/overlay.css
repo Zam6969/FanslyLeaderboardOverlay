@@ -160,6 +160,7 @@ body {
   position: relative;
   display: grid;
   place-items: center;
+  gap: 1px;
   min-width: 78px;
   min-height: 48px;
   border: 1px solid rgba(255, 255, 255, 0.15);
@@ -169,6 +170,19 @@ body {
   color: var(--amber);
   font-size: clamp(1.5rem, 5vw, 2.4rem);
   font-weight: 1000;
+}
+
+.movement-pill strong {
+  font: inherit;
+  line-height: 0.88;
+}
+
+.movement-pill span {
+  color: var(--muted);
+  font-size: 0.62rem;
+  font-weight: 950;
+  line-height: 1;
+  text-transform: uppercase;
 }
 
 .countdown-pill {

@@ -30,23 +30,32 @@ const ENDPOINT =
 const LEADERBOARD_INFO_ENDPOINT =
   process.env.FANSLY_LEADERBOARD_INFO_ENDPOINT ||
   'https://leaderboard.fansly.com/leaderboard/getCurrentLeaderboard/v1/?v=1&ngsw-bypass=true';
+const ACCOUNT_ME_ENDPOINT =
+  process.env.FANSLY_ACCOUNT_ME_ENDPOINT ||
+  'https://apiv3.fansly.com/api/v1/account/me?ngsw-bypass=true';
+const STREAM_CHANNEL_ENDPOINT =
+  process.env.FANSLY_STREAM_CHANNEL_ENDPOINT ||
+  'https://apiv3.fansly.com/api/v1/streaming/channel/{ID}?ngsw-bypass=true';
 const LOGIN_URL = process.env.FANSLY_LOGIN_URL || 'https://fansly.com/';
 const HOST = process.env.HOST || '127.0.0.1';
 const PORT = Number.parseInt(process.env.PORT || '8787', 10);
 const POLL_MS = Number.parseInt(process.env.POLL_MS || '30000', 10);
-const HISTORY_LIMIT = Number.parseInt(process.env.HISTORY_LIMIT || '30', 10);
+const STREAM_POLL_MS = Number.parseInt(process.env.STREAM_POLL_MS || '180000', 10);
+const HISTORY_LIMIT = Number.parseInt(process.env.HISTORY_LIMIT || '720', 10);
 const ENCRYPTED_JSON_FORMAT = 'fansly-obs-overlay/encrypted-json-v1';
 const ENCRYPTION_KEY_FORMAT = 'fansly-obs-overlay/encryption-key-v1';
 const DATA_ENCRYPTION_ALGORITHM = 'aes-256-gcm';
 const PASSPHRASE_KDF_ITERATIONS = 210000;
 const SESSION_EXPIRED_MESSAGE = 'Fansly login expired. Click Start login capture and log in again.';
 const OVERLAY_APPEARANCE_MODES = new Set(['classic', 'pill', 'neon', 'logo', 'compact']);
+const OVERLAY_MOVEMENT_RANGES = new Set(['last-change', 'last-hour', 'stream']);
 
 const endpointUrl = new URL(ENDPOINT);
 const DEFAULT_OVERLAY_SETTINGS = Object.freeze({
   showHistory: true,
   showMovement: true,
   showCountdown: true,
+  movementRange: 'last-change',
   appearanceMode: 'classic',
   title: 'Fansly Leaderboard Rank',
   theme: {
@@ -60,7 +69,9 @@ let browserContext;
 let capturePage;
 let captureState;
 let pollTimer;
+let streamTimer;
 let pollInFlight = false;
+let streamPollInFlight = false;
 const clients = new Set();
 let encryptionKeyPromise;
 
@@ -83,6 +94,7 @@ const appState = {
     lastUpdatedAt: null,
     error: null
   },
+  stream: createDefaultStreamState(),
   overlaySettings: createDefaultOverlaySettings(),
   lastPollAt: null,
   nextPollAt: null,
@@ -119,6 +131,7 @@ server.listen(PORT, HOST, () => {
   console.log(`OBS browser source URL:        http://${HOST}:${PORT}/overlay`);
   openDashboardBrowser(dashboardUrl);
   scheduleNextPoll(POLL_MS);
+  scheduleNextStreamPoll(1500);
   void refreshLeaderboardInfo('startup').then(broadcastState);
   broadcastState();
 });
@@ -294,6 +307,7 @@ async function rememberAuthenticatedRequest(request) {
   appState.error = null;
   broadcastState();
   await pollNow('capture');
+  void refreshStreamStatus('capture').then(broadcastState);
 }
 
 async function rememberExtensionCapture(body) {
@@ -318,6 +332,7 @@ async function rememberExtensionCapture(body) {
   clearSessionExpired();
   broadcastState();
   await pollNow('extension-capture');
+  void refreshStreamStatus('extension-capture').then(broadcastState);
 }
 
 async function pollNow(reason = 'timer') {
@@ -436,6 +451,85 @@ async function refreshLeaderboardInfo() {
   }
 }
 
+async function refreshStreamStatus(reason = 'timer') {
+  if (streamPollInFlight || appState.testMode) {
+    if (reason === 'timer') {
+      scheduleNextStreamPoll(STREAM_POLL_MS);
+    }
+    return;
+  }
+
+  if (!captureState) {
+    appState.stream = {
+      ...appState.stream,
+      lastUpdatedAt: new Date().toISOString(),
+      error: 'Waiting for captured Fansly auth.'
+    };
+    if (reason === 'timer') {
+      scheduleNextStreamPoll(STREAM_POLL_MS);
+    }
+    return;
+  }
+
+  streamPollInFlight = true;
+  try {
+    const accountId = appState.stream.accountId || (await fetchAccountId());
+    const streamPayload = await fetchFanslyJson(streamChannelUrl(accountId), 'Fansly stream status');
+    appState.stream = preserveStreamMovementBaseline({
+      ...extractStreamInfo(streamPayload, accountId),
+      lastUpdatedAt: new Date().toISOString(),
+      error: null
+    });
+    rememberStreamMovementBaseline();
+  } catch (error) {
+    appState.stream = {
+      ...appState.stream,
+      lastUpdatedAt: new Date().toISOString(),
+      error: error.message || String(error)
+    };
+  } finally {
+    streamPollInFlight = false;
+    if (reason !== 'manual') {
+      scheduleNextStreamPoll(STREAM_POLL_MS);
+    }
+  }
+}
+
+async function fetchAccountId() {
+  const payload = await fetchFanslyJson(ACCOUNT_ME_ENDPOINT, 'Fansly account');
+  const accountId = payload?.response?.account?.id || payload?.account?.id;
+  if (typeof accountId !== 'string' || !accountId.trim()) {
+    throw new Error('Could not find account.id in the Fansly account response.');
+  }
+  return accountId.trim();
+}
+
+async function fetchFanslyJson(url, label) {
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: await buildFanslyApiHeaders(url),
+    cache: 'no-store',
+    redirect: 'follow'
+  });
+  const text = await response.text();
+  const payload = parseJson(text);
+
+  if (isSessionExpiredResponse(response.status, text, payload)) {
+    markSessionExpired(sessionExpiredReason(response.status, text));
+    throw new Error(SESSION_EXPIRED_MESSAGE);
+  }
+
+  if (!response.ok) {
+    throw new Error(`${label} returned HTTP ${response.status}. ${trimForUi(text)}`);
+  }
+
+  return payload;
+}
+
+function streamChannelUrl(accountId) {
+  return STREAM_CHANNEL_ENDPOINT.replace('{ID}', encodeURIComponent(accountId)).replace('{id}', encodeURIComponent(accountId));
+}
+
 function isSessionExpired() {
   return appState.status === 'session-expired' || Boolean(appState.sessionExpiredAt);
 }
@@ -495,7 +589,7 @@ function bodyLooksLikeSessionExpired(value) {
   return hasAuthWord && hasExpiredWord;
 }
 
-async function buildReplayHeaders() {
+async function buildReplayHeaders(targetUrl = ENDPOINT) {
   const blocked = new Set([
     'accept-encoding',
     'connection',
@@ -519,8 +613,9 @@ async function buildReplayHeaders() {
     headers[name] = String(value);
   }
 
+  const hostname = safeHostname(targetUrl) || endpointUrl.hostname;
   if (!hasHeader(headers, 'cookie')) {
-    const cookieHeader = await buildCookieHeader();
+    const cookieHeader = await buildCookieHeader(hostname);
     if (cookieHeader) {
       headers.cookie = cookieHeader;
     }
@@ -532,7 +627,7 @@ async function buildReplayHeaders() {
 }
 
 async function buildLeaderboardInfoHeaders() {
-  const headers = captureState ? await buildReplayHeaders() : {};
+  const headers = captureState ? await buildReplayHeaders(LEADERBOARD_INFO_ENDPOINT) : {};
   if (!hasHeader(headers, 'accept')) {
     headers.accept = 'application/json, text/plain, */*';
   }
@@ -541,7 +636,17 @@ async function buildLeaderboardInfoHeaders() {
   return headers;
 }
 
-async function buildCookieHeader() {
+async function buildFanslyApiHeaders(url) {
+  const headers = captureState ? await buildReplayHeaders(url) : {};
+  if (!hasHeader(headers, 'accept')) {
+    headers.accept = 'application/json, text/plain, */*';
+  }
+  headers['cache-control'] = 'no-cache';
+  headers.pragma = 'no-cache';
+  return headers;
+}
+
+async function buildCookieHeader(hostname = endpointUrl.hostname) {
   const state = await readJson(storageStatePath, null);
   if (!state || !Array.isArray(state.cookies)) {
     return '';
@@ -551,9 +656,17 @@ async function buildCookieHeader() {
   return state.cookies
     .filter(cookie => cookie.name && cookie.value)
     .filter(cookie => !cookie.expires || cookie.expires < 0 || cookie.expires > nowSeconds)
-    .filter(cookie => cookieMatchesHost(cookie.domain, endpointUrl.hostname))
+    .filter(cookie => cookieMatchesHost(cookie.domain, hostname))
     .map(cookie => `${cookie.name}=${cookie.value}`)
     .join('; ');
+}
+
+function safeHostname(value) {
+  try {
+    return new URL(value).hostname;
+  } catch {
+    return null;
+  }
 }
 
 function cookieMatchesHost(cookieDomain = '', host = '') {
@@ -573,6 +686,27 @@ function createDefaultOverlaySettings() {
   };
 }
 
+function createDefaultStreamState() {
+  return {
+    accountId: null,
+    channelId: null,
+    streamId: null,
+    status: null,
+    streamStatus: null,
+    isLive: false,
+    title: null,
+    viewerCount: null,
+    startedAt: null,
+    createdAt: null,
+    lastFetchedAt: null,
+    movementBaselineStartedAt: null,
+    movementBaselineRank: null,
+    movementBaselineAt: null,
+    lastUpdatedAt: null,
+    error: null
+  };
+}
+
 function mergeOverlaySettings(input, base = createDefaultOverlaySettings()) {
   const next = {
     ...createDefaultOverlaySettings(),
@@ -585,10 +719,12 @@ function mergeOverlaySettings(input, base = createDefaultOverlaySettings()) {
 
   if (!input || typeof input !== 'object') {
     next.appearanceMode = sanitizeOverlayAppearanceMode(next.appearanceMode, DEFAULT_OVERLAY_SETTINGS.appearanceMode);
+    next.movementRange = sanitizeOverlayMovementRange(next.movementRange, DEFAULT_OVERLAY_SETTINGS.movementRange);
     return next;
   }
 
   next.appearanceMode = sanitizeOverlayAppearanceMode(next.appearanceMode, DEFAULT_OVERLAY_SETTINGS.appearanceMode);
+  next.movementRange = sanitizeOverlayMovementRange(next.movementRange, DEFAULT_OVERLAY_SETTINGS.movementRange);
 
   if (typeof input.showHistory === 'boolean') {
     next.showHistory = input.showHistory;
@@ -598,6 +734,9 @@ function mergeOverlaySettings(input, base = createDefaultOverlaySettings()) {
   }
   if (typeof input.showCountdown === 'boolean') {
     next.showCountdown = input.showCountdown;
+  }
+  if (typeof input.movementRange === 'string') {
+    next.movementRange = sanitizeOverlayMovementRange(input.movementRange, next.movementRange);
   }
   if (typeof input.appearanceMode === 'string') {
     next.appearanceMode = sanitizeOverlayAppearanceMode(input.appearanceMode, next.appearanceMode);
@@ -634,6 +773,14 @@ function sanitizeOverlayAppearanceMode(value, fallback) {
   return OVERLAY_APPEARANCE_MODES.has(normalized) ? normalized : fallback;
 }
 
+function sanitizeOverlayMovementRange(value, fallback) {
+  if (typeof value !== 'string') {
+    return fallback;
+  }
+  const normalized = value.trim().toLowerCase();
+  return OVERLAY_MOVEMENT_RANGES.has(normalized) ? normalized : fallback;
+}
+
 function sanitizeOverlayTitle(value, fallback) {
   const normalized = value.replace(/\s+/g, ' ').trim();
   if (!normalized) {
@@ -659,6 +806,7 @@ async function recordRank(rank, rankPath, payload, source) {
   appState.rankPath = rankPath;
   appState.lastPayloadPreview = previewPayload(payload);
   appState.history = [...appState.history, entry].slice(-HISTORY_LIMIT);
+  rememberStreamMovementBaseline(entry);
   await writeJson(historyPath, appState.history);
 }
 
@@ -736,6 +884,196 @@ function extractLeaderboardInfo(value) {
   };
 }
 
+function extractStreamInfo(value, accountId) {
+  const channel = value?.response || value?.channel || {};
+  const stream = channel.stream || {};
+  const streamStatus = numberOrNull(stream.status);
+  const channelStatus = numberOrNull(channel.status);
+  const isLive = streamStatus === 2 || channelStatus === 2;
+
+  return {
+    accountId,
+    channelId: stringOrNull(channel.id),
+    streamId: stringOrNull(stream.id),
+    status: channelStatus,
+    streamStatus,
+    isLive,
+    title: stringOrNull(stream.title),
+    viewerCount: numberOrNull(stream.viewerCount),
+    startedAt: normalizeFanslyTimestamp(stream.startedAt ?? stream.createdAt ?? channel.createdAt),
+    createdAt: normalizeFanslyTimestamp(stream.createdAt ?? channel.createdAt),
+    lastFetchedAt: normalizeFanslyTimestamp(stream.lastFetchedAt)
+  };
+}
+
+function computeMovementSummary() {
+  const range = sanitizeOverlayMovementRange(appState.overlaySettings.movementRange, DEFAULT_OVERLAY_SETTINGS.movementRange);
+  if (range === 'last-hour') {
+    return computeMovementSince(Date.now() - 60 * 60 * 1000, {
+      range,
+      label: 'Last hour',
+      shortLabel: '1h',
+      includePreviousBaseline: true
+    });
+  }
+
+  if (range === 'stream') {
+    if (!appState.stream.isLive || !appState.stream.startedAt) {
+      return {
+        range,
+        value: null,
+        label: appState.stream.isLive ? 'Waiting for stream rank' : 'Stream offline',
+        shortLabel: appState.stream.isLive ? 'Live' : 'Offline',
+        isLive: appState.stream.isLive,
+        startedAt: appState.stream.startedAt,
+        sampleCount: 0
+      };
+    }
+
+    return computeMovementSince(new Date(appState.stream.startedAt).getTime(), {
+      range,
+      label: 'Since stream start',
+      shortLabel: 'Live',
+      includePreviousBaseline: false,
+      baseline: streamMovementBaseline(),
+      startedAt: appState.stream.startedAt,
+      isLive: true
+    });
+  }
+
+  return {
+    range: 'last-change',
+    value: appState.movement,
+    label: 'Last change',
+    shortLabel: '',
+    sampleCount: appState.movement == null ? 0 : 1
+  };
+}
+
+function computeMovementSince(startMs, options) {
+  const history = normalizedHistoryEntries();
+  const latest = history[history.length - 1];
+  if (!latest || appState.rank == null || !Number.isFinite(startMs)) {
+    return {
+      range: options.range,
+      value: null,
+      label: options.label,
+      shortLabel: options.shortLabel,
+      sampleCount: 0,
+      startedAt: options.startedAt || null,
+      isLive: Boolean(options.isLive)
+    };
+  }
+
+  const inWindow = history.filter(entry => entry.time >= startMs);
+  const previousBaseline = options.includePreviousBaseline
+    ? history.filter(entry => entry.time <= startMs).at(-1)
+    : null;
+  const baseline = options.baseline || previousBaseline || inWindow[0] || latest;
+  const value = baseline.rank - latest.rank;
+
+  return {
+    range: options.range,
+    value,
+    label: options.label,
+    shortLabel: options.shortLabel,
+    since: new Date(startMs).toISOString(),
+    baselineAt: baseline.at,
+    baselineRank: baseline.rank,
+    currentRank: latest.rank,
+    sampleCount: inWindow.length || (baseline === latest ? 1 : 0),
+    startedAt: options.startedAt || null,
+    isLive: Boolean(options.isLive)
+  };
+}
+
+function preserveStreamMovementBaseline(nextStream) {
+  const previous = appState.stream || {};
+  if (
+    nextStream.isLive &&
+    nextStream.startedAt &&
+    previous.movementBaselineStartedAt === nextStream.startedAt &&
+    previous.movementBaselineRank != null
+  ) {
+    return {
+      ...nextStream,
+      movementBaselineStartedAt: previous.movementBaselineStartedAt,
+      movementBaselineRank: previous.movementBaselineRank,
+      movementBaselineAt: previous.movementBaselineAt
+    };
+  }
+
+  return {
+    ...nextStream,
+    movementBaselineStartedAt: nextStream.isLive ? nextStream.startedAt : null,
+    movementBaselineRank: null,
+    movementBaselineAt: null
+  };
+}
+
+function rememberStreamMovementBaseline(entry = null) {
+  if (!appState.stream?.isLive || !appState.stream.startedAt) {
+    return;
+  }
+
+  const streamStartedAt = appState.stream.startedAt;
+  if (
+    appState.stream.movementBaselineStartedAt === streamStartedAt &&
+    appState.stream.movementBaselineRank != null
+  ) {
+    return;
+  }
+
+  const startMs = new Date(streamStartedAt).getTime();
+  if (!Number.isFinite(startMs)) {
+    return;
+  }
+
+  const candidate =
+    normalizeRankHistoryEntry(entry) ||
+    normalizedHistoryEntries().find(historyEntry => historyEntry.time >= startMs);
+
+  if (!candidate || candidate.time < startMs) {
+    return;
+  }
+
+  appState.stream = {
+    ...appState.stream,
+    movementBaselineStartedAt: streamStartedAt,
+    movementBaselineRank: candidate.rank,
+    movementBaselineAt: candidate.at
+  };
+}
+
+function streamMovementBaseline() {
+  const rank = Number.parseInt(appState.stream?.movementBaselineRank, 10);
+  const at = appState.stream?.movementBaselineAt;
+  const time = new Date(at).getTime();
+  if (!Number.isFinite(rank) || !Number.isFinite(time)) {
+    return null;
+  }
+  return { rank, at, time };
+}
+
+function normalizedHistoryEntries() {
+  return (Array.isArray(appState.history) ? appState.history : [])
+    .map(normalizeRankHistoryEntry)
+    .filter(Boolean)
+    .sort((a, b) => a.time - b.time);
+}
+
+function normalizeRankHistoryEntry(entry) {
+  if (!entry || typeof entry !== 'object') {
+    return null;
+  }
+  const time = new Date(entry.at).getTime();
+  const rank = Number.parseInt(entry.rank, 10);
+  if (!Number.isFinite(time) || !Number.isFinite(rank)) {
+    return null;
+  }
+  return { ...entry, rank, time };
+}
+
 function normalizeFanslyDate(value) {
   if (typeof value !== 'string' || !value.trim()) {
     return null;
@@ -747,6 +1085,43 @@ function normalizeFanslyDate(value) {
     return null;
   }
   return date.toISOString();
+}
+
+function normalizeFanslyTimestamp(value) {
+  if (value == null || value === '') {
+    return null;
+  }
+
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    const millis = value > 100000000000 ? value : value * 1000;
+    const date = new Date(millis);
+    return Number.isNaN(date.getTime()) ? null : date.toISOString();
+  }
+
+  if (typeof value === 'string' && /^\d+$/.test(value.trim())) {
+    return normalizeFanslyTimestamp(Number.parseInt(value, 10));
+  }
+
+  if (typeof value === 'string') {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date.toISOString();
+  }
+
+  return null;
+}
+
+function stringOrNull(value) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function numberOrNull(value) {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return Math.trunc(value);
+  }
+  if (typeof value === 'string' && /^-?\d+$/.test(value.trim())) {
+    return Number.parseInt(value, 10);
+  }
+  return null;
 }
 
 function numberFromRankField(key, value) {
@@ -804,6 +1179,16 @@ function scheduleNextPoll(delay) {
   pollTimer = setTimeout(() => pollNow('timer'), delay);
 }
 
+function scheduleNextStreamPoll(delay) {
+  if (streamTimer) {
+    clearTimeout(streamTimer);
+  }
+  streamTimer = setTimeout(async () => {
+    await refreshStreamStatus('timer');
+    broadcastState();
+  }, delay);
+}
+
 async function resetAuth() {
   if (browserContext) {
     await browserContext.close();
@@ -824,6 +1209,7 @@ async function resetAuth() {
   appState.rankPath = null;
   appState.lastPollAt = null;
   appState.lastPayloadPreview = null;
+  appState.stream = createDefaultStreamState();
   appState.history = [];
   await writeJson(historyPath, appState.history);
   scheduleNextPoll(POLL_MS);
@@ -884,17 +1270,22 @@ function publicState() {
     ok: true,
     endpoint: ENDPOINT,
     leaderboardInfoEndpoint: LEADERBOARD_INFO_ENDPOINT,
+    accountEndpoint: ACCOUNT_ME_ENDPOINT,
+    streamChannelEndpoint: STREAM_CHANNEL_ENDPOINT,
     loginUrl: LOGIN_URL,
     pollMs: POLL_MS,
+    streamPollMs: STREAM_POLL_MS,
     status: appState.status,
     error: appState.error,
     testMode: appState.testMode,
     sessionExpiredAt: appState.sessionExpiredAt,
     sessionExpiredReason: appState.sessionExpiredReason,
     leaderboard: appState.leaderboard,
+    stream: appState.stream,
     overlaySettings: appState.overlaySettings,
     rank: appState.rank,
     movement: appState.movement,
+    movementSummary: computeMovementSummary(),
     rankPath: appState.rankPath,
     lastPollAt: appState.lastPollAt,
     nextPollAt: appState.nextPollAt,
@@ -1397,6 +1788,9 @@ function trimForUi(value) {
 async function shutdown() {
   if (pollTimer) {
     clearTimeout(pollTimer);
+  }
+  if (streamTimer) {
+    clearTimeout(streamTimer);
   }
   for (const client of clients) {
     client.end();
