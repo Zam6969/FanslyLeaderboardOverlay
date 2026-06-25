@@ -28,7 +28,7 @@ On Windows, double-click:
 Start Fansly Overlay.cmd
 ```
 
-The launcher checks GitHub for updates, installs dependencies the first time, then starts the app. The update check is read-only; if a newer build is found, it prints the update command or GitHub download link and keeps starting normally.
+The launcher checks GitHub for updates, installs dependencies the first time, then starts the app. If a newer build is found, it asks before updating. Git checkouts can update with `git pull`; downloaded copies can open the GitHub download page.
 
 Or run manually:
 
@@ -153,6 +153,13 @@ To skip the Windows launcher's GitHub update check:
 
 ```powershell
 $env:FANSLY_OVERLAY_SKIP_UPDATE_CHECK = "1"
+.\Start Fansly Overlay.cmd
+```
+
+To skip only the update prompt:
+
+```powershell
+$env:FANSLY_OVERLAY_NO_UPDATE_PROMPT = "1"
 .\Start Fansly Overlay.cmd
 ```
 
