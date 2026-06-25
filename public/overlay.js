@@ -246,6 +246,7 @@ function handlePopVisibility(appearanceMode, changeDirection) {
   if (appearanceMode !== 'pop') {
     window.clearTimeout(popHideTimer);
     delete els.root.dataset.popVisible;
+    delete els.root.dataset.popSide;
     return;
   }
 
@@ -255,6 +256,7 @@ function handlePopVisibility(appearanceMode, changeDirection) {
 }
 
 function showPopOverlay() {
+  els.root.dataset.popSide = Math.random() > 0.5 ? 'right' : 'left';
   els.root.dataset.popVisible = 'true';
   window.clearTimeout(popHideTimer);
   popHideTimer = window.setTimeout(() => {
