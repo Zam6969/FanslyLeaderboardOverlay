@@ -29,7 +29,8 @@ body {
 }
 
 .overlay {
-  width: min(620px, calc(100vw - 24px));
+  --overlay-width: 620px;
+  width: min(var(--overlay-width), calc(100vw - 24px));
   padding: 12px;
 }
 
@@ -316,10 +317,6 @@ body {
   color: var(--rose);
 }
 
-.overlay[data-appearance="pill"] {
-  width: min(650px, calc(100vw - 24px));
-}
-
 .overlay[data-appearance="pill"] .rank-card {
   min-height: 118px;
   border-radius: 999px;
@@ -469,10 +466,6 @@ body {
   box-shadow: 0 0 22px rgba(42, 157, 244, 0.1);
 }
 
-.overlay[data-appearance="compact"] {
-  width: min(440px, calc(100vw - 24px));
-}
-
 .overlay[data-appearance="compact"] .rank-card {
   align-items: flex-start;
   flex-direction: column;
@@ -525,6 +518,60 @@ body {
 .overlay[data-appearance="compact"] .history-item {
   min-width: 58px;
   padding: 5px 7px;
+}
+
+.overlay[data-appearance="pop"] {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(18px) scale(0.94);
+  transform-origin: center;
+  transition:
+    opacity 260ms ease,
+    transform 320ms cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+
+.overlay[data-appearance="pop"][data-pop-visible="true"] {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.overlay[data-appearance="pop"] .rank-card {
+  min-height: 112px;
+  border-radius: 18px;
+  padding: 16px 18px;
+  background:
+    linear-gradient(115deg, var(--overlay-gradient-a), transparent 50%),
+    linear-gradient(285deg, rgba(255, 111, 141, 0.12), transparent 48%),
+    rgba(13, 16, 22, 0.9);
+  box-shadow:
+    0 20px 70px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+}
+
+.overlay[data-appearance="pop"] .kicker {
+  font-size: 0.72rem;
+}
+
+.overlay[data-appearance="pop"] .hash {
+  font-size: clamp(1.8rem, 5vw, 3.3rem);
+}
+
+.overlay[data-appearance="pop"] .rank {
+  font-size: clamp(3.7rem, 12vw, 6.1rem);
+}
+
+.overlay[data-appearance="pop"] .movement-pill {
+  min-height: 40px;
+  padding: 0 15px;
+}
+
+.overlay[data-appearance="pop"] .countdown-pill {
+  min-width: 0;
+  padding: 7px 10px;
+}
+
+.overlay[data-appearance="pop"] .history-strip {
+  display: none;
 }
 
 .rank-pulse-up {

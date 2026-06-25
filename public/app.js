@@ -7,9 +7,10 @@ const defaultTheme = {
 };
 const defaultOverlayTitle = 'Fansly Leaderboard Rank';
 const defaultAppearanceMode = 'classic';
-const appearanceModes = new Set(['classic', 'pill', 'neon', 'logo', 'compact']);
-const defaultMovementRange = 'last-change';
+const appearanceModes = new Set(['classic', 'pill', 'neon', 'logo', 'compact', 'pop']);
+const defaultMovementRange = 'stream';
 const movementRanges = new Set(['last-change', 'last-hour', 'stream']);
+const defaultWidthScale = 1;
 
 const els = {
   statusPill: document.querySelector('#statusPill'),
@@ -49,6 +50,8 @@ const els = {
   movementRangeSelect: document.querySelector('#movementRangeSelect'),
   appearanceModes: [...document.querySelectorAll('input[name="appearanceMode"]')],
   overlayTitleInput: document.querySelector('#overlayTitleInput'),
+  overlayWidthInput: document.querySelector('#overlayWidthInput'),
+  overlayWidthValue: document.querySelector('#overlayWidthValue'),
   gradientAColor: document.querySelector('#gradientAColor'),
   gradientBColor: document.querySelector('#gradientBColor'),
   shineColor: document.querySelector('#shineColor'),
@@ -109,6 +112,12 @@ els.overlayTitleInput.addEventListener('input', () => {
 els.overlayTitleInput.addEventListener('change', () => {
   window.clearTimeout(titleSaveTimer);
   postTitle();
+});
+els.overlayWidthInput.addEventListener('input', () => {
+  renderWidthLabel(normalizedWidthScale(Number(els.overlayWidthInput.value) / 100));
+});
+els.overlayWidthInput.addEventListener('change', () => {
+  post('/api/overlay-settings', { widthScale: normalizedWidthScale(Number(els.overlayWidthInput.value) / 100) });
 });
 els.gradientAColor.addEventListener('change', () => postTheme());
 els.gradientBColor.addEventListener('change', () => postTheme());
@@ -346,6 +355,7 @@ function setBusy(isBusy) {
     input.disabled = isBusy;
   }
   els.overlayTitleInput.disabled = isBusy;
+  els.overlayWidthInput.disabled = isBusy;
   els.gradientAColor.disabled = isBusy;
   els.gradientBColor.disabled = isBusy;
   els.shineColor.disabled = isBusy;
@@ -385,6 +395,10 @@ function renderOverlayControls(state) {
     els.overlayTitleInput.value = title;
   }
   els.overlayTitleInput.disabled = busy;
+  const widthScale = normalizedWidthScale(state?.overlaySettings?.widthScale);
+  els.overlayWidthInput.value = Math.round(widthScale * 100);
+  els.overlayWidthInput.disabled = busy;
+  renderWidthLabel(widthScale);
   const theme = normalizedTheme(state?.overlaySettings?.theme);
   els.gradientAColor.value = theme.gradientA;
   els.gradientBColor.value = theme.gradientB;
@@ -497,6 +511,18 @@ function normalizedAppearanceMode(value) {
 function normalizedMovementRange(value) {
   const normalized = typeof value === 'string' ? value.toLowerCase() : '';
   return movementRanges.has(normalized) ? normalized : defaultMovementRange;
+}
+
+function normalizedWidthScale(value) {
+  const number = Number.parseFloat(value);
+  if (!Number.isFinite(number)) {
+    return defaultWidthScale;
+  }
+  return Math.min(1.15, Math.max(0.65, Math.round(number * 20) / 20));
+}
+
+function renderWidthLabel(widthScale) {
+  els.overlayWidthValue.textContent = `${Math.round(widthScale * 100)}%`;
 }
 
 function normalizeHex(value, fallback) {

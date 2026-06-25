@@ -440,6 +440,41 @@ h2 {
   outline-offset: 2px;
 }
 
+.range-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 56px;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 16px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 10px 12px;
+  background: #15181d;
+  color: var(--text);
+}
+
+.range-control span {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.range-control input {
+  width: 100%;
+  min-height: 28px;
+  padding: 0;
+  accent-color: var(--mint);
+}
+
+.range-control output {
+  color: var(--cyan);
+  font-size: 0.9rem;
+  font-weight: 900;
+  text-align: right;
+}
+
 .color-control {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 46px;

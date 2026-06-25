@@ -16,6 +16,8 @@ let latestState = null;
 let arrowClearTimer;
 let confettiClearTimer;
 let confettiInterval;
+let popHideTimer;
+const POP_VISIBLE_MS = 180000;
 const confettiColors = ['#59e0aa', '#6bd3ff', '#ffd166', '#ff6f8d', '#fbfcff'];
 const defaultTheme = {
   gradientA: '#59e0aa',
@@ -24,7 +26,15 @@ const defaultTheme = {
 };
 const defaultOverlayTitle = 'Fansly Leaderboard Rank';
 const defaultAppearanceMode = 'classic';
-const appearanceModes = new Set(['classic', 'pill', 'neon', 'logo', 'compact']);
+const appearanceModes = new Set(['classic', 'pill', 'neon', 'logo', 'compact', 'pop']);
+const appearanceBaseWidths = {
+  classic: 620,
+  pill: 650,
+  neon: 620,
+  logo: 620,
+  compact: 440,
+  pop: 520
+};
 
 const events = new EventSource('/events');
 events.addEventListener('state', event => render(JSON.parse(event.data)));
@@ -43,25 +53,35 @@ window.setInterval(() => renderCountdown(latestState), 1000);
 function render(state) {
   latestState = state;
   const nextRank = state.rank;
+  let changeDirection = null;
   if (nextRank != null && previousRank != null && nextRank !== previousRank) {
     const direction = state.movement > 0 ? 'up' : state.movement < 0 ? 'down' : 'same';
     if (direction !== 'same') {
+      changeDirection = direction;
       playRankChange(direction);
     }
   } else if (nextRank != null && previousRank == null && state.movement !== 0 && state.movement != null) {
-    playRankChange(state.movement > 0 ? 'up' : 'down');
+    changeDirection = state.movement > 0 ? 'up' : 'down';
+    playRankChange(changeDirection);
   }
   previousRank = nextRank;
 
+  const appearanceMode = normalizedAppearanceMode(state.overlaySettings?.appearanceMode);
   els.rank.textContent = nextRank == null ? '--' : nextRank;
   setTitle(state.overlaySettings?.title);
-  setAppearanceMode(state.overlaySettings?.appearanceMode);
+  setAppearanceMode(appearanceMode);
+  applyLayout(appearanceMode, state.overlaySettings?.widthScale);
   applyTheme(state.overlaySettings?.theme);
-  setMovement(state.movementSummary || { value: state.movement, range: 'last-change' }, state.status);
+  const movementSummary =
+    appearanceMode === 'pop' && changeDirection
+      ? { value: state.movement, range: 'last-change', shortLabel: '' }
+      : state.movementSummary || { value: state.movement, range: 'stream' };
+  setMovement(movementSummary, state.status);
   renderCountdown(state);
   els.root.classList.toggle('movement-hidden', state.overlaySettings?.showMovement === false);
   els.root.classList.toggle('countdown-hidden', state.overlaySettings?.showCountdown === false);
   els.root.classList.toggle('history-hidden', state.overlaySettings?.showHistory === false);
+  handlePopVisibility(appearanceMode, changeDirection);
   setHistory(state.history || []);
 }
 
@@ -200,8 +220,46 @@ function setTitle(value) {
 }
 
 function setAppearanceMode(value) {
+  els.root.dataset.appearance = normalizedAppearanceMode(value);
+}
+
+function normalizedAppearanceMode(value) {
   const normalized = typeof value === 'string' ? value.toLowerCase() : '';
-  els.root.dataset.appearance = appearanceModes.has(normalized) ? normalized : defaultAppearanceMode;
+  return appearanceModes.has(normalized) ? normalized : defaultAppearanceMode;
+}
+
+function applyLayout(appearanceMode, widthScale) {
+  const baseWidth = appearanceBaseWidths[appearanceMode] || appearanceBaseWidths[defaultAppearanceMode];
+  const scale = normalizedWidthScale(widthScale);
+  els.root.style.setProperty('--overlay-width', `${Math.round(baseWidth * scale)}px`);
+}
+
+function normalizedWidthScale(value) {
+  const number = Number.parseFloat(value);
+  if (!Number.isFinite(number)) {
+    return 1;
+  }
+  return Math.min(1.15, Math.max(0.65, Math.round(number * 20) / 20));
+}
+
+function handlePopVisibility(appearanceMode, changeDirection) {
+  if (appearanceMode !== 'pop') {
+    window.clearTimeout(popHideTimer);
+    delete els.root.dataset.popVisible;
+    return;
+  }
+
+  if (changeDirection === 'up' || changeDirection === 'down') {
+    showPopOverlay();
+  }
+}
+
+function showPopOverlay() {
+  els.root.dataset.popVisible = 'true';
+  window.clearTimeout(popHideTimer);
+  popHideTimer = window.setTimeout(() => {
+    els.root.dataset.popVisible = 'false';
+  }, POP_VISIBLE_MS);
 }
 
 function applyTheme(theme) {

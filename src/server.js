@@ -47,7 +47,7 @@ const ENCRYPTION_KEY_FORMAT = 'fansly-obs-overlay/encryption-key-v1';
 const DATA_ENCRYPTION_ALGORITHM = 'aes-256-gcm';
 const PASSPHRASE_KDF_ITERATIONS = 210000;
 const SESSION_EXPIRED_MESSAGE = 'Fansly login expired. Click Start login capture and log in again.';
-const OVERLAY_APPEARANCE_MODES = new Set(['classic', 'pill', 'neon', 'logo', 'compact']);
+const OVERLAY_APPEARANCE_MODES = new Set(['classic', 'pill', 'neon', 'logo', 'compact', 'pop']);
 const OVERLAY_MOVEMENT_RANGES = new Set(['last-change', 'last-hour', 'stream']);
 
 const endpointUrl = new URL(ENDPOINT);
@@ -55,8 +55,9 @@ const DEFAULT_OVERLAY_SETTINGS = Object.freeze({
   showHistory: true,
   showMovement: true,
   showCountdown: true,
-  movementRange: 'last-change',
+  movementRange: 'stream',
   appearanceMode: 'classic',
+  widthScale: 1,
   title: 'Fansly Leaderboard Rank',
   theme: {
     gradientA: '#59e0aa',
@@ -692,6 +693,7 @@ function createDefaultStreamState() {
     channelId: null,
     streamId: null,
     status: null,
+    channelStatus: null,
     streamStatus: null,
     isLive: false,
     title: null,
@@ -720,11 +722,13 @@ function mergeOverlaySettings(input, base = createDefaultOverlaySettings()) {
   if (!input || typeof input !== 'object') {
     next.appearanceMode = sanitizeOverlayAppearanceMode(next.appearanceMode, DEFAULT_OVERLAY_SETTINGS.appearanceMode);
     next.movementRange = sanitizeOverlayMovementRange(next.movementRange, DEFAULT_OVERLAY_SETTINGS.movementRange);
+    next.widthScale = sanitizeOverlayWidthScale(next.widthScale, DEFAULT_OVERLAY_SETTINGS.widthScale);
     return next;
   }
 
   next.appearanceMode = sanitizeOverlayAppearanceMode(next.appearanceMode, DEFAULT_OVERLAY_SETTINGS.appearanceMode);
   next.movementRange = sanitizeOverlayMovementRange(next.movementRange, DEFAULT_OVERLAY_SETTINGS.movementRange);
+  next.widthScale = sanitizeOverlayWidthScale(next.widthScale, DEFAULT_OVERLAY_SETTINGS.widthScale);
 
   if (typeof input.showHistory === 'boolean') {
     next.showHistory = input.showHistory;
@@ -740,6 +744,9 @@ function mergeOverlaySettings(input, base = createDefaultOverlaySettings()) {
   }
   if (typeof input.appearanceMode === 'string') {
     next.appearanceMode = sanitizeOverlayAppearanceMode(input.appearanceMode, next.appearanceMode);
+  }
+  if (input.widthScale != null) {
+    next.widthScale = sanitizeOverlayWidthScale(input.widthScale, next.widthScale);
   }
   if (typeof input.title === 'string') {
     next.title = sanitizeOverlayTitle(input.title, next.title);
@@ -779,6 +786,14 @@ function sanitizeOverlayMovementRange(value, fallback) {
   }
   const normalized = value.trim().toLowerCase();
   return OVERLAY_MOVEMENT_RANGES.has(normalized) ? normalized : fallback;
+}
+
+function sanitizeOverlayWidthScale(value, fallback) {
+  const number = Number.parseFloat(value);
+  if (!Number.isFinite(number)) {
+    return fallback;
+  }
+  return Math.min(1.15, Math.max(0.65, Math.round(number * 20) / 20));
 }
 
 function sanitizeOverlayTitle(value, fallback) {
@@ -889,13 +904,15 @@ function extractStreamInfo(value, accountId) {
   const stream = channel.stream || {};
   const streamStatus = numberOrNull(stream.status);
   const channelStatus = numberOrNull(channel.status);
-  const isLive = streamStatus === 2 || channelStatus === 2;
+  const effectiveStatus = streamStatus ?? channelStatus;
+  const isLive = streamStatus != null ? streamStatus === 2 : channelStatus === 2;
 
   return {
     accountId,
     channelId: stringOrNull(channel.id),
     streamId: stringOrNull(stream.id),
-    status: channelStatus,
+    status: effectiveStatus,
+    channelStatus,
     streamStatus,
     isLive,
     title: stringOrNull(stream.title),

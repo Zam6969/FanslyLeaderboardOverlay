@@ -73,7 +73,7 @@
               <select id="movementRangeSelect">
                 <option value="last-change">Last change</option>
                 <option value="last-hour">Last hour</option>
-                <option value="stream">Current stream</option>
+                <option value="stream" selected>Current stream</option>
               </select>
             </label>
           </div>
@@ -126,7 +126,16 @@
               <input type="radio" name="appearanceMode" value="compact" />
               <span>Compact</span>
             </label>
+            <label>
+              <input type="radio" name="appearanceMode" value="pop" />
+              <span>Pop in</span>
+            </label>
           </fieldset>
+          <label class="range-control" for="overlayWidthInput">
+            <span>Overlay width</span>
+            <input id="overlayWidthInput" type="range" min="65" max="115" step="5" value="100" />
+            <output id="overlayWidthValue" for="overlayWidthInput">100%</output>
+          </label>
           <div class="color-grid">
             <label class="color-control" for="gradientAColor">
               <span>Gradient 1</span>
