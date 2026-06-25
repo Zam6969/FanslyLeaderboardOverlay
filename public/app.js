@@ -32,6 +32,7 @@ const els = {
   streamStatus: document.querySelector('#streamStatus'),
   errorText: document.querySelector('#errorText'),
   payloadPreview: document.querySelector('#payloadPreview'),
+  overlayPreview: document.querySelector('#overlayPreview'),
   openBrowserBtn: document.querySelector('#openBrowserBtn'),
   startLoginBtn: document.querySelector('#startLoginBtn'),
   pollNowBtn: document.querySelector('#pollNowBtn'),
@@ -52,10 +53,12 @@ const els = {
   gradientBColor: document.querySelector('#gradientBColor'),
   shineColor: document.querySelector('#shineColor'),
   resetThemeBtn: document.querySelector('#resetThemeBtn'),
+  refreshPreviewBtn: document.querySelector('#refreshPreviewBtn'),
   captureSource: document.querySelector('#captureSource')
 };
 
 els.overlayUrl.textContent = overlayUrl;
+els.overlayPreview.src = overlayUrl;
 
 let latestState = null;
 let busy = false;
@@ -113,6 +116,7 @@ els.shineColor.addEventListener('change', () => postTheme());
 els.resetThemeBtn.addEventListener('click', () => {
   post('/api/overlay-settings', { resetTheme: true });
 });
+els.refreshPreviewBtn.addEventListener('click', () => refreshOverlayPreview());
 els.testForm.addEventListener('submit', async event => {
   event.preventDefault();
   const rank = Number.parseInt(els.testRank.value, 10);
@@ -346,6 +350,7 @@ function setBusy(isBusy) {
   els.gradientBColor.disabled = isBusy;
   els.shineColor.disabled = isBusy;
   els.resetThemeBtn.disabled = isBusy;
+  els.refreshPreviewBtn.disabled = isBusy;
   renderTestControls(latestState);
 }
 
@@ -388,6 +393,10 @@ function renderOverlayControls(state) {
   els.gradientBColor.disabled = busy;
   els.shineColor.disabled = busy;
   els.resetThemeBtn.disabled = busy;
+}
+
+function refreshOverlayPreview() {
+  els.overlayPreview.src = `${overlayUrl}?preview=${Date.now()}`;
 }
 
 function postTitle() {

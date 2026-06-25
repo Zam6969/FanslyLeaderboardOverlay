@@ -84,6 +84,8 @@ The movement badge range can be changed between:
 
 Use the `Overlay customization` panel on the dashboard to change the overlay title, appearance mode, the two background gradient colors, and the animated swipe color. Appearance modes include Classic, Pill, Neon, Logo, and Compact. These settings are saved locally under `data/`, so they survive app restarts without being included in the repository.
 
+The dashboard also includes a live `OBS view` preview beside the customization controls. It renders the same `/overlay` page used by OBS, with a refresh button if you want to reload just the preview frame.
+
 ## Login Capture
 
 ### Browser Tab Capture

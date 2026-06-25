@@ -91,55 +91,70 @@
         <button class="secondary" id="copyUrlBtn" type="button">Copy URL</button>
       </section>
 
-      <section class="panel customize-panel">
-        <div class="section-heading">
-          <div>
-            <p class="label">Overlay customization</p>
-            <h2>Appearance</h2>
+      <section class="customize-grid">
+        <article class="panel customize-panel">
+          <div class="section-heading">
+            <div>
+              <p class="label">Overlay customization</p>
+              <h2>Appearance</h2>
+            </div>
+            <button class="secondary" id="resetThemeBtn" type="button">Reset colors</button>
           </div>
-          <button class="secondary" id="resetThemeBtn" type="button">Reset colors</button>
-        </div>
-        <label class="text-control" for="overlayTitleInput">
-          <span>Overlay title</span>
-          <input id="overlayTitleInput" type="text" maxlength="48" placeholder="Fansly Leaderboard Rank" />
-        </label>
-        <fieldset class="mode-control" id="appearanceModeControl">
-          <legend>Overlay mode</legend>
-          <label>
-            <input type="radio" name="appearanceMode" value="classic" />
-            <span>Classic</span>
+          <label class="text-control" for="overlayTitleInput">
+            <span>Overlay title</span>
+            <input id="overlayTitleInput" type="text" maxlength="48" placeholder="Fansly Leaderboard Rank" />
           </label>
-          <label>
-            <input type="radio" name="appearanceMode" value="pill" />
-            <span>Pill</span>
-          </label>
-          <label>
-            <input type="radio" name="appearanceMode" value="neon" />
-            <span>Neon</span>
-          </label>
-          <label>
-            <input type="radio" name="appearanceMode" value="logo" />
-            <span>Logo</span>
-          </label>
-          <label>
-            <input type="radio" name="appearanceMode" value="compact" />
-            <span>Compact</span>
-          </label>
-        </fieldset>
-        <div class="color-grid">
-          <label class="color-control" for="gradientAColor">
-            <span>Gradient 1</span>
-            <input id="gradientAColor" type="color" value="#59e0aa" />
-          </label>
-          <label class="color-control" for="gradientBColor">
-            <span>Gradient 2</span>
-            <input id="gradientBColor" type="color" value="#6bd3ff" />
-          </label>
-          <label class="color-control" for="shineColor">
-            <span>Swipe color</span>
-            <input id="shineColor" type="color" value="#ffffff" />
-          </label>
-        </div>
+          <fieldset class="mode-control" id="appearanceModeControl">
+            <legend>Overlay mode</legend>
+            <label>
+              <input type="radio" name="appearanceMode" value="classic" />
+              <span>Classic</span>
+            </label>
+            <label>
+              <input type="radio" name="appearanceMode" value="pill" />
+              <span>Pill</span>
+            </label>
+            <label>
+              <input type="radio" name="appearanceMode" value="neon" />
+              <span>Neon</span>
+            </label>
+            <label>
+              <input type="radio" name="appearanceMode" value="logo" />
+              <span>Logo</span>
+            </label>
+            <label>
+              <input type="radio" name="appearanceMode" value="compact" />
+              <span>Compact</span>
+            </label>
+          </fieldset>
+          <div class="color-grid">
+            <label class="color-control" for="gradientAColor">
+              <span>Gradient 1</span>
+              <input id="gradientAColor" type="color" value="#59e0aa" />
+            </label>
+            <label class="color-control" for="gradientBColor">
+              <span>Gradient 2</span>
+              <input id="gradientBColor" type="color" value="#6bd3ff" />
+            </label>
+            <label class="color-control" for="shineColor">
+              <span>Swipe color</span>
+              <input id="shineColor" type="color" value="#ffffff" />
+            </label>
+          </div>
+        </article>
+
+        <article class="panel preview-panel">
+          <div class="section-heading">
+            <div>
+              <p class="label">Overlay preview</p>
+              <h2>OBS view</h2>
+            </div>
+            <button class="secondary" id="refreshPreviewBtn" type="button">Refresh preview</button>
+          </div>
+          <div class="preview-stage">
+            <iframe id="overlayPreview" title="OBS overlay preview" src="/overlay"></iframe>
+          </div>
+        </article>
       </section>
 
       <section class="details-grid">
