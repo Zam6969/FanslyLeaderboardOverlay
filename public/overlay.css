@@ -61,6 +61,30 @@ body {
   animation: sweep 4.8s ease-in-out infinite;
 }
 
+.logo-rain {
+  position: absolute;
+  z-index: 0;
+  inset: -24px;
+  display: none;
+  overflow: hidden;
+  filter: blur(1.2px);
+  opacity: 0.58;
+  pointer-events: none;
+}
+
+.logo-rain span {
+  position: absolute;
+  left: var(--x);
+  top: calc(var(--size) * -2);
+  width: var(--size);
+  aspect-ratio: 1;
+  background: url("/assets/fansly-logo.webp") center / contain no-repeat;
+  opacity: 0;
+  transform: translate3d(0, -32px, 0) rotate(0deg);
+  animation: logoRainFall var(--duration) linear infinite;
+  animation-delay: var(--delay);
+}
+
 .rank-copy {
   position: relative;
   min-width: 0;
@@ -446,12 +470,18 @@ body {
   pointer-events: none;
 }
 
+.overlay[data-appearance="logo"] .logo-rain,
+.overlay[data-appearance="pop"][data-pop-variant="logo"] .logo-rain {
+  display: block;
+}
+
 .overlay[data-appearance="logo"] .shine {
-  z-index: 1;
+  z-index: 2;
   background: linear-gradient(90deg, transparent, rgba(42, 157, 244, 0.28), transparent);
 }
 
-.overlay[data-appearance="logo"] .rank-copy {
+.overlay[data-appearance="logo"] .rank-copy,
+.overlay[data-appearance="logo"] .side-stack {
   z-index: 2;
 }
 
@@ -766,6 +796,23 @@ body {
   100% {
     background-position: 100% 68%, 18% 28%, 12% 50%, 42% 10%;
     transform: translate3d(2%, 1%, 0) scale(1.08) rotate(4deg);
+  }
+}
+
+@keyframes logoRainFall {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, -42px, 0) rotate(0deg) scale(0.82);
+  }
+  12% {
+    opacity: 0.16;
+  }
+  82% {
+    opacity: 0.13;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--drift), 210px, 0) rotate(var(--spin)) scale(1.05);
   }
 }
 
