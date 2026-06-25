@@ -28,7 +28,7 @@ On Windows, double-click:
 Start Fansly Overlay.cmd
 ```
 
-The launcher installs dependencies the first time, then starts the app.
+The launcher checks GitHub for updates, installs dependencies the first time, then starts the app. The update check is read-only; if a newer build is found, it prints the update command or GitHub download link and keeps starting normally.
 
 Or run manually:
 
@@ -147,6 +147,13 @@ To start the server without opening the browser:
 ```powershell
 $env:NO_OPEN = "1"
 npm.cmd start
+```
+
+To skip the Windows launcher's GitHub update check:
+
+```powershell
+$env:FANSLY_OVERLAY_SKIP_UPDATE_CHECK = "1"
+.\Start Fansly Overlay.cmd
 ```
 
 `LOGIN_HEADLESS=1` is supported, but the normal headed Chromium mode is recommended because Fansly may require interactive login or verification.

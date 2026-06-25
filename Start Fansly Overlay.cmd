@@ -11,6 +11,13 @@ if errorlevel 1 (
   exit /b 1
 )
 
+if /i not "%FANSLY_OVERLAY_SKIP_UPDATE_CHECK%"=="1" (
+  if exist "scripts\check-update.ps1" (
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File "scripts\check-update.ps1"
+    echo.
+  )
+)
+
 if not exist "node_modules\" (
   echo Installing dependencies...
   call npm.cmd install
