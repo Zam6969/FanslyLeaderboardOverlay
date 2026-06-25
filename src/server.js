@@ -205,8 +205,17 @@ async function handleRequest(req, res) {
   if (url.pathname === '/api/overlay-settings' && req.method === 'POST') {
     const body = await readRequestJson(req);
     appState.overlaySettings = mergeOverlaySettings(body, appState.overlaySettings);
-    await writeJson(overlaySettingsPath, appState.overlaySettings);
     broadcastState();
+    try {
+      await writeJson(overlaySettingsPath, appState.overlaySettings);
+    } catch (error) {
+      console.warn(`Could not save overlay settings: ${error.message || error}`);
+      return sendJson(res, 200, {
+        ok: true,
+        warning: 'Overlay settings applied for this session, but could not be saved locally.',
+        state: publicState()
+      });
+    }
     return sendJson(res, 200, { ok: true, state: publicState() });
   }
 
